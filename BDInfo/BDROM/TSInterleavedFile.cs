@@ -17,10 +17,7 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //=============================================================================
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+using DiscUtils;
 
 // TODO: Do more interesting things here...
 
@@ -28,10 +25,10 @@ namespace BDInfo
 {
     public class TSInterleavedFile
     {
-        public FileInfo FileInfo = null;
+        public DiscFileInfo FileInfo = null;
         public string Name = null;
 
-        public TSInterleavedFile(FileInfo fileInfo)
+        public TSInterleavedFile(DiscFileInfo fileInfo)
         {
             FileInfo = fileInfo;
             Name = fileInfo.Name.ToUpper();

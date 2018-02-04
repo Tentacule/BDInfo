@@ -23,12 +23,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using DiscUtils;
 
 namespace BDInfo
 {
     public class TSPlaylistFile
     {
-        private FileInfo FileInfo = null;
+        private DiscFileInfo FileInfo = null;
         public string FileType = null;
         public bool IsInitialized = false;
         public string Name = null;
@@ -64,7 +65,7 @@ namespace BDInfo
 
         public TSPlaylistFile(
             BDROM bdrom,
-            FileInfo fileInfo)
+            DiscFileInfo fileInfo)
         {
             BDROM = bdrom;
             FileInfo = fileInfo;
@@ -222,7 +223,7 @@ namespace BDInfo
             Dictionary<string, TSStreamFile> streamFiles,
             Dictionary<string, TSStreamClipFile> streamClipFiles)
         {
-            FileStream fileStream = null;
+            Stream fileStream = null;
             BinaryReader fileReader = null;
 
             try
@@ -230,7 +231,7 @@ namespace BDInfo
                 Streams.Clear();
                 StreamClips.Clear();
 
-                fileStream = File.OpenRead(FileInfo.FullName);
+                fileStream = FileInfo.OpenRead();
                 fileReader = new BinaryReader(fileStream);
 
                 byte[] data = new byte[fileStream.Length];

@@ -23,12 +23,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using DiscUtils;
 
 namespace BDInfo
 {
     public class TSStreamClipFile
     {
-        public FileInfo FileInfo = null;
+        public DiscFileInfo FileInfo = null;
         public string FileType = null;
         public bool IsValid = false;
         public string Name = null;
@@ -37,7 +38,7 @@ namespace BDInfo
             new Dictionary<ushort,TSStream>();
 
         public TSStreamClipFile(
-            FileInfo fileInfo)
+            DiscFileInfo fileInfo)
         {
             FileInfo = fileInfo;
             Name = fileInfo.Name.ToUpper();
@@ -45,7 +46,7 @@ namespace BDInfo
 
         public void Scan()
         {
-            FileStream fileStream = null;
+            Stream fileStream = null;
             BinaryReader fileReader = null;
 
             try
@@ -56,7 +57,7 @@ namespace BDInfo
 #endif
                 Streams.Clear();
 
-                fileStream = File.OpenRead(FileInfo.FullName);
+                fileStream = FileInfo.OpenRead();
                 fileReader = new BinaryReader(fileStream);
 
                 byte[] data = new byte[fileStream.Length];
