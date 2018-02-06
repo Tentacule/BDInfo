@@ -137,6 +137,8 @@
     <Compile Include="ScanBDROMState.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Utilities\BytesReaderUtilities.cs" />
+    <Compile Include="Utilities\ComparerUtilities.cs" />
     <EmbeddedResource Include="FormChart.resx">
       <DependentUpon>FormChart.cs</DependentUpon>
     </EmbeddedResource>

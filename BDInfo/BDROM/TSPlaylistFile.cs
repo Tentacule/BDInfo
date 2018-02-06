@@ -24,6 +24,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using BDInfo.BDROM;
+using BDInfo.Utilities;
 using DiscUtils;
 
 namespace BDInfo
@@ -41,7 +42,7 @@ namespace BDInfo
 
         public List<double> Chapters = new List<double>();
 
-        public Dictionary<ushort, TSStream> Streams = 
+        public Dictionary<ushort, TSStream> Streams =
             new Dictionary<ushort, TSStream>();
         public Dictionary<ushort, TSStream> PlaylistStreams =
             new Dictionary<ushort, TSStream>();
@@ -49,19 +50,19 @@ namespace BDInfo
             new List<TSStreamClip>();
         public List<Dictionary<ushort, TSStream>> AngleStreams =
             new List<Dictionary<ushort, TSStream>>();
-        public List<Dictionary<double, TSStreamClip>> AngleClips = 
+        public List<Dictionary<double, TSStreamClip>> AngleClips =
             new List<Dictionary<double, TSStreamClip>>();
         public int AngleCount = 0;
 
-        public List<TSStream> SortedStreams = 
+        public List<TSStream> SortedStreams =
             new List<TSStream>();
-        public List<TSVideoStream> VideoStreams = 
+        public List<TSVideoStream> VideoStreams =
             new List<TSVideoStream>();
-        public List<TSAudioStream> AudioStreams = 
+        public List<TSAudioStream> AudioStreams =
             new List<TSAudioStream>();
-        public List<TSTextStream> TextStreams = 
+        public List<TSTextStream> TextStreams =
             new List<TSTextStream>();
-        public List<TSGraphicsStream> GraphicsStreams = 
+        public List<TSGraphicsStream> GraphicsStreams =
             new List<TSGraphicsStream>();
 
         public TSPlaylistFile(
@@ -240,7 +241,7 @@ namespace BDInfo
 
                 int pos = 0;
 
-                FileType = ReadString(data, 8, ref pos);
+                FileType = BytesReaderUtilities.ReadString(data, 8, ref pos);
                 if (FileType != "MPLS0100" && FileType != "MPLS0200")
                 {
                     throw new Exception(string.Format(
@@ -248,24 +249,24 @@ namespace BDInfo
                         FileInfo.Name, FileType));
                 }
 
-                int playlistOffset = ReadInt32(data, ref pos);
-                int chaptersOffset = ReadInt32(data, ref pos);
-                int extensionsOffset = ReadInt32(data, ref pos);
+                int playlistOffset = BytesReaderUtilities.ReadInt32(data, ref pos);
+                int chaptersOffset = BytesReaderUtilities.ReadInt32(data, ref pos);
+                int extensionsOffset = BytesReaderUtilities.ReadInt32(data, ref pos);
 
                 pos = playlistOffset;
 
-                int playlistLength = ReadInt32(data, ref pos);
-                int playlistReserved = ReadInt16(data, ref pos);
-                int itemCount = ReadInt16(data, ref pos);
-                int subitemCount = ReadInt16(data, ref pos);
+                int playlistLength = BytesReaderUtilities.ReadInt32(data, ref pos);
+                int playlistReserved = BytesReaderUtilities.ReadInt16(data, ref pos);
+                int itemCount = BytesReaderUtilities.ReadInt16(data, ref pos);
+                int subitemCount = BytesReaderUtilities.ReadInt16(data, ref pos);
 
                 List<TSStreamClip> chapterClips = new List<TSStreamClip>();
                 for (int itemIndex = 0; itemIndex < itemCount; itemIndex++)
                 {
                     int itemStart = pos;
-                    int itemLength = ReadInt16(data, ref pos);
-                    string itemName = ReadString(data, 5, ref pos);
-                    string itemType = ReadString(data, 4, ref pos);
+                    int itemLength = BytesReaderUtilities.ReadInt16(data, ref pos);
+                    string itemName = BytesReaderUtilities.ReadString(data, 5, ref pos);
+                    string itemType = BytesReaderUtilities.ReadString(data, 4, ref pos);
 
                     TSStreamFile streamFile = null;
                     string streamFileName = string.Format(
@@ -300,11 +301,11 @@ namespace BDInfo
                     int condition = data[pos] & 0x0F;
                     pos += 2;
 
-                    int inTime = ReadInt32(data, ref pos);
+                    int inTime = BytesReaderUtilities.ReadInt32(data, ref pos);
                     if (inTime < 0) inTime &= 0x7FFFFFFF;
                     double timeIn = (double)inTime / 45000;
 
-                    int outTime = ReadInt32(data, ref pos);
+                    int outTime = BytesReaderUtilities.ReadInt32(data, ref pos);
                     if (outTime < 0) outTime &= 0x7FFFFFFF;
                     double timeOut = (double)outTime / 45000;
 
@@ -327,8 +328,8 @@ namespace BDInfo
                         pos += 2;
                         for (int angle = 0; angle < angles - 1; angle++)
                         {
-                            string angleName = ReadString(data, 5, ref pos);
-                            string angleType = ReadString(data, 4, ref pos);
+                            string angleName = BytesReaderUtilities.ReadString(data, 5, ref pos);
+                            string angleType = BytesReaderUtilities.ReadString(data, 4, ref pos);
                             pos += 1;
 
                             TSStreamFile angleFile = null;
@@ -372,7 +373,7 @@ namespace BDInfo
                         if (angles - 1 > AngleCount) AngleCount = angles - 1;
                     }
 
-                    int streamInfoLength = ReadInt16(data, ref pos);
+                    int streamInfoLength = BytesReaderUtilities.ReadInt16(data, ref pos);
                     pos += 2;
                     int streamCountVideo = data[pos++];
                     int streamCountAudio = data[pos++];
@@ -437,13 +438,13 @@ namespace BDInfo
 
                 pos = chaptersOffset + 4;
 
-                int chapterCount = ReadInt16(data, ref pos);
+                int chapterCount = BytesReaderUtilities.ReadInt16(data, ref pos);
 
                 for (int chapterIndex = 0;
                     chapterIndex < chapterCount;
                     chapterIndex++)
                 {
-                    int chapterType = data[pos+1];
+                    int chapterType = data[pos + 1];
 
                     if (chapterType == 1)
                     {
@@ -540,21 +541,21 @@ namespace BDInfo
             switch (headerType)
             {
                 case 1:
-                    pid = ReadInt16(data, ref pos);
+                    pid = BytesReaderUtilities.ReadInt16(data, ref pos);
                     break;
                 case 2:
                     subpathid = data[pos++];
                     subclipid = data[pos++];
-                    pid = ReadInt16(data, ref pos);
+                    pid = BytesReaderUtilities.ReadInt16(data, ref pos);
                     break;
                 case 3:
                     subpathid = data[pos++];
-                    pid = ReadInt16(data, ref pos);
+                    pid = BytesReaderUtilities.ReadInt16(data, ref pos);
                     break;
                 case 4:
                     subpathid = data[pos++];
                     subclipid = data[pos++];
-                    pid = ReadInt16(data, ref pos);
+                    pid = BytesReaderUtilities.ReadInt16(data, ref pos);
                     break;
                 default:
                     break;
@@ -613,14 +614,14 @@ namespace BDInfo
                 case TSStreamType.MPEG1_AUDIO:
                 case TSStreamType.MPEG2_AUDIO:
 
-                    int audioFormat = ReadByte(data, ref pos);
+                    int audioFormat = BytesReaderUtilities.ReadByte(data, ref pos);
 
                     TSChannelLayout channelLayout = (TSChannelLayout)
                         (audioFormat >> 4);
                     TSSampleRate sampleRate = (TSSampleRate)
                         (audioFormat & 0xF);
 
-                    string audioLanguage = ReadString(data, 3, ref pos);
+                    string audioLanguage = BytesReaderUtilities.ReadString(data, 3, ref pos);
 
                     stream = new TSAudioStream();
                     ((TSAudioStream)stream).ChannelLayout = channelLayout;
@@ -642,7 +643,7 @@ namespace BDInfo
                 case TSStreamType.INTERACTIVE_GRAPHICS:
                 case TSStreamType.PRESENTATION_GRAPHICS:
 
-                    string graphicsLanguage = ReadString(data, 3, ref pos);
+                    string graphicsLanguage = BytesReaderUtilities.ReadString(data, 3, ref pos);
 
                     stream = new TSGraphicsStream();
                     ((TSGraphicsStream)stream).LanguageCode = graphicsLanguage;
@@ -663,8 +664,8 @@ namespace BDInfo
 
                 case TSStreamType.SUBTITLE:
 
-                    int code = ReadByte(data, ref pos); // TODO
-                    string textLanguage = ReadString(data, 3, ref pos);
+                    int code = BytesReaderUtilities.ReadByte(data, ref pos); // TODO
+                    string textLanguage = BytesReaderUtilities.ReadString(data, 3, ref pos);
 
                     stream = new TSTextStream();
                     ((TSTextStream)stream).LanguageCode = textLanguage;
@@ -854,7 +855,7 @@ namespace BDInfo
 
             if (!BDInfoSettings.KeepStreamOrder)
             {
-                VideoStreams.Sort(CompareVideoStreams);
+                VideoStreams.Sort(ComparerUtilities.CompareVideoStreams);
             }
             foreach (TSStream stream in VideoStreams)
             {
@@ -870,7 +871,7 @@ namespace BDInfo
 
             if (!BDInfoSettings.KeepStreamOrder)
             {
-                AudioStreams.Sort(CompareAudioStreams);
+                AudioStreams.Sort(ComparerUtilities.CompareAudioStreams);
             }
             foreach (TSStream stream in AudioStreams)
             {
@@ -879,7 +880,7 @@ namespace BDInfo
 
             if (!BDInfoSettings.KeepStreamOrder)
             {
-                GraphicsStreams.Sort(CompareGraphicsStreams);
+                GraphicsStreams.Sort(ComparerUtilities.CompareGraphicsStreams);
             }
             foreach (TSStream stream in GraphicsStreams)
             {
@@ -888,7 +889,7 @@ namespace BDInfo
 
             if (!BDInfoSettings.KeepStreamOrder)
             {
-                TextStreams.Sort(CompareTextStreams);
+                TextStreams.Sort(ComparerUtilities.CompareTextStreams);
             }
             foreach (TSStream stream in TextStreams)
             {
@@ -949,341 +950,6 @@ namespace BDInfo
 
                 return true;
             }
-        }
-
-        public static int CompareVideoStreams(
-            TSVideoStream x, 
-            TSVideoStream y)
-        {
-            if (x == null && y == null)
-            {
-                return 0;
-            }
-            else if (x == null && y != null)
-            {
-                return 1;
-            }
-            else if (x != null && y == null)
-            {
-                return -1;
-            }
-            else
-            {
-                if (x.Height > y.Height)
-                {
-                    return -1;
-                }
-                else if (y.Height > x.Height)
-                {
-                    return 1;
-                }
-                else if (x.PID > y.PID)
-                {
-                    return 1;
-                }
-                else if (y.PID > x.PID)
-                {
-                    return -1;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-        }
-
-        public static int CompareAudioStreams(
-            TSAudioStream x, 
-            TSAudioStream y)
-        {
-            if (x == y)
-            {
-                return 0;
-            }
-            else if (x == null && y == null)
-            {
-                return 0;
-            }
-            else if (x == null && y != null)
-            {
-                return -1;
-            }
-            else if (x != null && y == null)
-            {
-                return 1;
-            }
-            else
-            {
-                if (x.ChannelCount > y.ChannelCount)
-                {
-                    return -1;
-                }
-                else if (y.ChannelCount > x.ChannelCount)
-                {
-                    return 1;
-                }
-                else
-                {
-                    int sortX = GetStreamTypeSortIndex(x.StreamType);
-                    int sortY = GetStreamTypeSortIndex(y.StreamType);
-
-                    if (sortX > sortY)
-                    {
-                        return -1;
-                    }
-                    else if (sortY > sortX)
-                    {
-                        return 1;
-                    }
-                    else
-                    {
-                        if (x.LanguageCode == "eng")
-                        {
-                            return -1;
-                        }
-                        else if (y.LanguageCode == "eng")
-                        {
-                            return 1;
-                        }
-                        else if (x.LanguageCode != y.LanguageCode)
-                        {
-                            return string.Compare(
-                                x.LanguageName, y.LanguageName);
-                        }
-                        else if (x.PID < y.PID)
-                        {
-                            return -1;
-                        }
-                        else if (y.PID < x.PID)
-                        {
-                            return 1;
-                        }
-                        return 0;
-                    }
-                }
-            }
-        }
-
-        public static int CompareTextStreams(
-            TSTextStream x,
-            TSTextStream y)
-        {
-            if (x == y)
-            {
-                return 0;
-            }
-            else if (x == null && y == null)
-            {
-                return 0;
-            }
-            else if (x == null && y != null)
-            {
-                return -1;
-            }
-            else if (x != null && y == null)
-            {
-                return 1;
-            }
-            else
-            {
-                if (x.LanguageCode == "eng")
-                {
-                    return -1;
-                }
-                else if (y.LanguageCode == "eng")
-                {
-                    return 1;
-                }
-                else
-                {
-                    if (x.LanguageCode == y.LanguageCode)
-                    {
-                        if (x.PID > y.PID)
-                        {
-                            return 1;
-                        }
-                        else if (y.PID > x.PID)
-                        {
-                            return -1;
-                        }
-                        else
-                        {
-                            return 0;
-                        }
-                    }
-                    else
-                    {
-                        return string.Compare(
-                            x.LanguageName, y.LanguageName);
-                    }
-                }
-            }
-        }
-
-        private static int CompareGraphicsStreams(
-            TSGraphicsStream x,
-            TSGraphicsStream y)
-        {
-            if (x == y)
-            {
-                return 0;
-            }
-            else if (x == null && y == null)
-            {
-                return 0;
-            }
-            else if (x == null && y != null)
-            {
-                return -1;
-            }
-            else if (x != null && y == null)
-            {
-                return 1;
-            }
-            else
-            {
-                int sortX = GetStreamTypeSortIndex(x.StreamType);
-                int sortY = GetStreamTypeSortIndex(y.StreamType);
-
-                if (sortX > sortY)
-                {
-                    return -1;
-                }
-                else if (sortY > sortX)
-                {
-                    return 1;
-                }
-                else if (x.LanguageCode == "eng")
-                {
-                    return -1;
-                }
-                else if (y.LanguageCode == "eng")
-                {
-                    return 1;
-                }
-                else
-                {
-                    if (x.LanguageCode == y.LanguageCode)
-                    {
-                        if (x.PID > y.PID)
-                        {
-                            return 1;
-                        }
-                        else if (y.PID > x.PID)
-                        {
-                            return -1;
-                        }
-                        else
-                        {
-                            return 0;
-                        }
-                    }
-                    else
-                    {
-                        return string.Compare(x.LanguageName, y.LanguageName);
-                    }
-                }
-            }
-        }
-
-        private static int GetStreamTypeSortIndex(TSStreamType streamType)
-        {
-            switch (streamType)
-            {
-                case TSStreamType.Unknown:
-                    return 0;
-                case TSStreamType.MPEG1_VIDEO:
-                    return 1;
-                case TSStreamType.MPEG2_VIDEO:
-                    return 2;
-                case TSStreamType.AVC_VIDEO:
-                    return 3;
-                case TSStreamType.VC1_VIDEO:
-                    return 4;
-                case TSStreamType.MVC_VIDEO:
-                    return 5;
-
-                case TSStreamType.MPEG1_AUDIO:
-                    return 1;
-                case TSStreamType.MPEG2_AUDIO:
-                    return 2;
-                case TSStreamType.AC3_PLUS_SECONDARY_AUDIO:
-                    return 3;
-                case TSStreamType.DTS_HD_SECONDARY_AUDIO:
-                    return 4;
-                case TSStreamType.AC3_AUDIO:
-                    return 5;
-                case TSStreamType.DTS_AUDIO:
-                    return 6;
-                case TSStreamType.AC3_PLUS_AUDIO:
-                    return 7;
-                case TSStreamType.DTS_HD_AUDIO:
-                    return 8;
-                case TSStreamType.AC3_TRUE_HD_AUDIO:
-                    return 9;
-                case TSStreamType.DTS_HD_MASTER_AUDIO:
-                    return 10;
-                case TSStreamType.LPCM_AUDIO:
-                    return 11;
-
-                case TSStreamType.SUBTITLE:
-                    return 1;
-                case TSStreamType.INTERACTIVE_GRAPHICS:
-                    return 2;
-                case TSStreamType.PRESENTATION_GRAPHICS:
-                    return 3;
-
-                default:
-                    return 0;
-            }
-        }
-
-        protected string ReadString(
-            byte[] data,
-            int count,
-            ref int pos)
-        {
-            string val =
-                ASCIIEncoding.ASCII.GetString(data, pos, count);
-
-            pos += count;
-
-            return val;
-        }
-
-        protected int ReadInt32(
-            byte[] data,
-            ref int pos)
-        {
-            int val =
-                ((int)data[pos] << 24) +
-                ((int)data[pos + 1] << 16) +
-                ((int)data[pos + 2] << 8) +
-                ((int)data[pos + 3]);
-
-            pos += 4;
-
-            return val;
-        }
-
-        protected int ReadInt16(
-            byte[] data,
-            ref int pos)
-        {
-            int val =
-                ((int)data[pos] << 8) +
-                ((int)data[pos + 1]);
-
-            pos += 2;
-
-            return val;
-        }
-
-        protected byte ReadByte(
-            byte[] data,
-            ref int pos)
-        {
-            return data[pos++];
         }
     }
 }

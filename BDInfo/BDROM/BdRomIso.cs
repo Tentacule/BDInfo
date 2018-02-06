@@ -20,6 +20,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BDInfo.Utilities;
 using DiscUtils;
 using DiscUtils.Udf;
 
@@ -274,7 +275,7 @@ namespace BDInfo.BDROM
         {
             TSStreamFile[] streamFiles = new TSStreamFile[StreamFiles.Count];
             StreamFiles.Values.CopyTo(streamFiles, 0);
-            Array.Sort(streamFiles, CompareStreamFiles);
+            Array.Sort(streamFiles, ComparerUtilities.CompareStreamFiles);
 
             List<TSPlaylistFile> errorPlaylistFiles = new List<TSPlaylistFile>();
             foreach (var playlistFile in PlaylistFiles.Values)
@@ -337,8 +338,6 @@ namespace BDInfo.BDROM
                     else throw ex;
                 }
             }
-
-
         }
 
         private void ScanFor50HzContent()
@@ -407,39 +406,6 @@ namespace BDInfo.BDROM
             }
 
             return size;
-        }
-
-        public static int CompareStreamFiles(TSStreamFile x, TSStreamFile y)
-        {
-            // TODO: Use interleaved file sizes
-
-            if ((x == null || x.FileInfo == null) && (y == null || y.FileInfo == null))
-            {
-                return 0;
-            }
-            else if ((x == null || x.FileInfo == null) && (y != null && y.FileInfo != null))
-            {
-                return 1;
-            }
-            else if ((x != null || x.FileInfo != null) && (y == null || y.FileInfo == null))
-            {
-                return -1;
-            }
-            else
-            {
-                if (x.FileInfo.Length > y.FileInfo.Length)
-                {
-                    return 1;
-                }
-                else if (y.FileInfo.Length > x.FileInfo.Length)
-                {
-                    return -1;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
         }
     }
 }

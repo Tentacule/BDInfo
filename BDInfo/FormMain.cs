@@ -30,6 +30,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BDInfo.BDROM;
+using BDInfo.Utilities;
 using DiscUtils;
 using DiscUtils.Udf;
 
@@ -464,7 +465,7 @@ namespace BDInfo
 
             TSPlaylistFile[] sortedPlaylistFiles = new TSPlaylistFile[_bdRomIso.PlaylistFiles.Count];
             _bdRomIso.PlaylistFiles.Values.CopyTo(sortedPlaylistFiles, 0);
-            Array.Sort(sortedPlaylistFiles, ComparePlaylistFiles);
+            Array.Sort(sortedPlaylistFiles, ComparerUtilities.ComparePlaylistFiles);
 
             foreach (TSPlaylistFile playlist1
                 in sortedPlaylistFiles)
@@ -510,7 +511,7 @@ namespace BDInfo
             for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
             {
                 List<TSPlaylistFile> group = groups[groupIndex];
-                group.Sort(ComparePlaylistFiles);
+                group.Sort(ComparerUtilities.ComparePlaylistFiles);
 
                 foreach (TSPlaylistFile playlist in group)
                 //in BdRomIso.PlaylistFiles.Values)
@@ -1304,35 +1305,5 @@ namespace BDInfo
 
         #endregion
 
-        public static int ComparePlaylistFiles(TSPlaylistFile x, TSPlaylistFile y)
-        {
-            if (x == null && y == null)
-            {
-                return 0;
-            }
-            else if (x == null && y != null)
-            {
-                return 1;
-            }
-            else if (x != null && y == null)
-            {
-                return -1;
-            }
-            else
-            {
-                if (x.TotalLength > y.TotalLength)
-                {
-                    return -1;
-                }
-                else if (y.TotalLength > x.TotalLength)
-                {
-                    return 1;
-                }
-                else
-                {
-                    return x.Name.CompareTo(y.Name);
-                }
-            }
-        }
     }
 }
