@@ -25,6 +25,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using BDInfo.BDROM;
 
 namespace BDInfo
 {
@@ -38,7 +39,7 @@ namespace BDInfo
         }
 
         public void Generate(
-            BDROM BDROM,
+            BdRomIso bdRomIso,
             List<TSPlaylistFile> playlists,
             ScanBDROMResult scanResult)
         {
@@ -49,39 +50,39 @@ namespace BDInfo
             {
                 string reportName = string.Format(
                     "BDINFO.{0}.txt",
-                    BDROM.VolumeLabel);
+                    bdRomIso.VolumeLabel);
                 
                 reportFile = File.CreateText(Path.Combine(Environment.CurrentDirectory, reportName));
             }
             textBoxReport.Text = "";
 
             string report = "";
-            string protection = (BDROM.IsBDPlus ? "BD+" : "AACS");
-            string bdjava = (BDROM.IsBDJava ? "Yes" : "No");
+            string protection = (bdRomIso.IsBDPlus ? "BD+" : "AACS");
+            string bdjava = (bdRomIso.IsBDJava ? "Yes" : "No");
 
             report += string.Format(
-                "{0,-16}{1}\r\n", "Disc Title:", BDROM.VolumeLabel);
+                "{0,-16}{1}\r\n", "Disc Title:", bdRomIso.VolumeLabel);
             report += string.Format(
-                "{0,-16}{1:N0} bytes\r\n", "Disc Size:", BDROM.Size);
+                "{0,-16}{1:N0} bytes\r\n", "Disc Size:", bdRomIso.Size);
             report += string.Format(
                 "{0,-16}{1}\r\n", "Protection:", protection);
             report += string.Format(
                 "{0,-16}{1}\r\n", "BD-Java:", bdjava);
 
             List<string> extraFeatures = new List<string>();
-            if (BDROM.Is50Hz)
+            if (bdRomIso.Is50Hz)
             {
                 extraFeatures.Add("50Hz Content");
             }
-            if (BDROM.Is3D)
+            if (bdRomIso.Is3D)
             {
                 extraFeatures.Add("Blu-ray 3D");
             }
-            if (BDROM.IsDBOX)
+            if (bdRomIso.IsDBOX)
             {
                 extraFeatures.Add("D-BOX Motion Code");
             }
-            if (BDROM.IsPSP)
+            if (bdRomIso.IsPSP)
             {
                 extraFeatures.Add("PSP Digital Copy");
             }
@@ -133,7 +134,7 @@ namespace BDInfo
 
                 string title = playlist.Name;
                 string discSize = string.Format(
-                    "{0:N0}", BDROM.Size);
+                    "{0:N0}", bdRomIso.Size);
 
                 TimeSpan playlistTotalLength =
                     new TimeSpan((long)(playlist.TotalLength * 10000000));
@@ -372,9 +373,9 @@ namespace BDInfo
                 report += "\r\n";
 
                 report += string.Format(
-                    "{0,-16}{1}\r\n", "Disc Title:", BDROM.VolumeLabel);
+                    "{0,-16}{1}\r\n", "Disc Title:", bdRomIso.VolumeLabel);
                 report += string.Format(
-                    "{0,-16}{1:N0} bytes\r\n", "Disc Size:", BDROM.Size);
+                    "{0,-16}{1:N0} bytes\r\n", "Disc Size:", bdRomIso.Size);
                 report += string.Format(
                     "{0,-16}{1}\r\n", "Protection:", protection);
                 report += string.Format(
@@ -427,9 +428,9 @@ namespace BDInfo
                  */
 
                 summary += string.Format(
-                    "Disc Title: {0}\r\n", BDROM.VolumeLabel);
+                    "Disc Title: {0}\r\n", bdRomIso.VolumeLabel);
                 summary += string.Format(
-                    "Disc Size: {0:N0} bytes\r\n", BDROM.Size);
+                    "Disc Size: {0:N0} bytes\r\n", bdRomIso.Size);
                 summary += string.Format(
                     "Protection: {0}\r\n", protection);
                 summary += string.Format(

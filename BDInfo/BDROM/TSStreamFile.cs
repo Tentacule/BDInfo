@@ -20,140 +20,12 @@
 #undef DEBUG
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.IsolatedStorage;
-using System.Text;
 using DiscUtils;
 using DiscUtils.Udf;
 
-namespace BDInfo
+namespace BDInfo.BDROM
 {
-    public class TSStreamState
-    {
-        public ulong TransferCount = 0;
-
-        public string StreamTag = null;
-
-        public ulong TotalPackets = 0;
-        public ulong WindowPackets = 0;
-
-        public ulong TotalBytes = 0;
-        public ulong WindowBytes = 0;
-
-        public long PeakTransferLength = 0;
-        public long PeakTransferRate = 0;
-
-        public double TransferMarker = 0;
-        public double TransferInterval = 0;
-
-        public TSStreamBuffer StreamBuffer = new TSStreamBuffer();
-
-        public uint Parse = 0;
-        public bool TransferState = false;
-        public int TransferLength = 0;
-        public int PacketLength = 0;
-        public byte PacketLengthParse = 0;
-        public byte PacketParse = 0;
-
-        public byte PTSParse = 0;
-        public ulong PTS = 0;
-        public ulong PTSTemp = 0;
-        public ulong PTSLast = 0;
-        public ulong PTSPrev = 0;
-        public ulong PTSDiff = 0;
-        public ulong PTSCount = 0;
-        public ulong PTSTransfer = 0;
-
-        public byte DTSParse = 0;
-        public ulong DTSTemp = 0;
-        public ulong DTSPrev = 0;
-
-        public byte PESHeaderLength = 0;
-        public byte PESHeaderFlags = 0;
-#if DEBUG
-        public byte PESHeaderIndex = 0;
-        public byte[] PESHeader = new byte[256 + 9];
-#endif
-    }
-
-    public class TSPacketParser
-    {
-        public bool SyncState = false;
-        public byte TimeCodeParse = 4;
-        public byte PacketLength = 0;
-        public byte HeaderParse = 0;
-
-        public uint TimeCode;
-        public byte TransportErrorIndicator;
-        public byte PayloadUnitStartIndicator;
-        public byte TransportPriority;
-        public ushort PID;
-        public byte TransportScramblingControl;
-        public byte AdaptionFieldControl;
-
-        public bool AdaptionFieldState = false;
-        public byte AdaptionFieldParse = 0;
-        public byte AdaptionFieldLength = 0;
-
-        public ushort PCRPID = 0xFFFF;
-        public byte PCRParse = 0;
-        public ulong PreviousPCR = 0;
-        public ulong PCR = 0;
-        public ulong PCRCount = 0;
-        public ulong PTSFirst = ulong.MaxValue;
-        public ulong PTSLast = ulong.MinValue;
-        public ulong PTSDiff = 0;
-
-        public byte[] PAT = new byte[1024];
-        public bool PATSectionStart = false;
-        public byte PATPointerField = 0;
-        public uint PATOffset = 0;
-        public byte PATSectionLengthParse = 0;
-        public ushort PATSectionLength = 0;
-        public uint PATSectionParse = 0;
-        public bool PATTransferState = false;
-        public byte PATSectionNumber = 0;
-        public byte PATLastSectionNumber = 0;
-
-        public ushort TransportStreamId = 0xFFFF;
-
-        public List<TSDescriptor> PMTProgramDescriptors = new List<TSDescriptor>();
-        public ushort PMTPID = 0xFFFF;
-        public Dictionary<ushort, byte[]> PMT = new Dictionary<ushort, byte[]>();
-        public bool PMTSectionStart = false;
-        public ushort PMTProgramInfoLength = 0;
-        public byte PMTProgramDescriptor = 0;
-        public byte PMTProgramDescriptorLengthParse = 0;
-        public byte PMTProgramDescriptorLength = 0;
-        public ushort PMTStreamInfoLength = 0;
-        public uint PMTStreamDescriptorLengthParse = 0;
-        public uint PMTStreamDescriptorLength = 0;
-        public byte PMTPointerField = 0;
-        public uint PMTOffset = 0;
-        public uint PMTSectionLengthParse = 0;
-        public ushort PMTSectionLength = 0;
-        public uint PMTSectionParse = 0;
-        public bool PMTTransferState = false;
-        public byte PMTSectionNumber = 0;
-        public byte PMTLastSectionNumber = 0;
-
-        public byte PMTTemp = 0;
-
-        public TSStream Stream = null;
-        public TSStreamState StreamState = null;
-
-        public ulong TotalPackets = 0;
-    }
-
-    public class TSStreamDiagnostics
-    {
-        public ulong Bytes = 0;
-        public ulong Packets = 0;
-        public double Marker = 0;
-        public double Interval = 0;
-        public string Tag = null;
-    }
 
     public class TSStreamFile
     {
@@ -447,7 +319,7 @@ namespace BDInfo
             streamState.WindowBytes = 0;
         }
 
-        public void Scan(UdfReader udfReader,List<TSPlaylistFile> playlists, bool isFullScan)
+        public void Scan(UdfReader udfReader, List<TSPlaylistFile> playlists, bool isFullScan)
         {
             if (playlists == null || playlists.Count == 0)
             {
@@ -473,8 +345,8 @@ namespace BDInfo
                 }
 
 
-              fileStream = tempFile.OpenRead();
-                
+                fileStream = tempFile.OpenRead();
+
                 Size = 0;
                 Length = 0;
 
@@ -670,7 +542,8 @@ namespace BDInfo
                                     parser.PAT[parser.PATOffset++] = buffer[i++];
                                     parser.PATSectionLength--;
                                     parser.PacketLength--;
-                                } --i;
+                                }
+                                --i;
 
                                 if (parser.PATSectionLength == 0)
                                 {
@@ -801,7 +674,8 @@ namespace BDInfo
                                     PMT[parser.PMTOffset++] = buffer[i++];
                                     --parser.PMTSectionLength;
                                     --parser.PacketLength;
-                                } --i;
+                                }
+                                --i;
 
                                 if (parser.PMTSectionLength == 0)
                                 {

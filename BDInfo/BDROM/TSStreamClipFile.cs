@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using BDInfo.BDROM;
 using DiscUtils;
 
 namespace BDInfo

@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using BDInfo.BDROM;
 using DiscUtils;
 
 namespace BDInfo
@@ -33,7 +34,7 @@ namespace BDInfo
         public string FileType = null;
         public bool IsInitialized = false;
         public string Name = null;
-        public BDROM BDROM = null;
+        public BdRomIso BdRomIso = null;
         public bool HasHiddenTracks = false;
         public bool HasLoops = false;
         public bool IsCustom = false;
@@ -64,20 +65,20 @@ namespace BDInfo
             new List<TSGraphicsStream>();
 
         public TSPlaylistFile(
-            BDROM bdrom,
+            BdRomIso bdRomIso,
             DiscFileInfo fileInfo)
         {
-            BDROM = bdrom;
+            BdRomIso = bdRomIso;
             FileInfo = fileInfo;
             Name = fileInfo.Name.ToUpper();
         }
 
         public TSPlaylistFile(
-            BDROM bdrom,
+            BdRomIso bdRomIso,
             string name,
             List<TSStreamClip> clips)
         {
-            BDROM = bdrom;
+            BdRomIso = bdRomIso;
             Name = name;
             IsCustom = true;
             foreach (TSStreamClip clip in clips)

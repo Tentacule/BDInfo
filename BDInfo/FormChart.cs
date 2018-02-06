@@ -25,6 +25,7 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
+using BDInfo.BDROM;
 using ZedGraph;
 
 namespace BDInfo
@@ -114,7 +115,7 @@ namespace BDInfo
             {
                 DefaultFileName = string.Format(
                     "{0}-{1}-",
-                    FixVolumeLabel(playlist.BDROM.VolumeLabel),
+                    FixVolumeLabel(playlist.BdRomIso.VolumeLabel),
                     Path.GetFileNameWithoutExtension(playlist.Name));
             }
 

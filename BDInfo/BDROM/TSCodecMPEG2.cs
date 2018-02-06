@@ -19,11 +19,7 @@
 
 #undef DEBUG
 
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace BDInfo
+namespace BDInfo.BDROM
 {
     public abstract class TSCodecMPEG2
     {

@@ -24,6 +24,7 @@ using System.Data;
 using System.Drawing;
 using System.Text;
 using System.Windows.Forms;
+using BDInfo.BDROM;
 
 namespace BDInfo
 {
@@ -31,17 +32,17 @@ namespace BDInfo
 
     public partial class FormPlaylist : Form
     {
-        private BDROM BDROM = null;
+        private BdRomIso _bdRomIso = null;
         private ListViewColumnSorter PlaylistColumnSorter;
         public List<TSStreamClip> StreamClips = new List<TSStreamClip>();
         private OnCustomPlaylistFinished OnFinished;
 
-        public FormPlaylist(string name, BDROM bdrom, OnCustomPlaylistFinished func)
+        public FormPlaylist(string name, BdRomIso bdRomIso, OnCustomPlaylistFinished func)
         {
             InitializeComponent();
 
             textBoxName.Text = name;
-            BDROM = bdrom;
+            _bdRomIso = bdRomIso;
             OnFinished = func;
 
             PlaylistColumnSorter = new ListViewColumnSorter();
@@ -52,7 +53,7 @@ namespace BDInfo
         {
             get
             {
-                if (BDROM == null ||
+                if (_bdRomIso == null ||
                     listViewPlaylistFiles.SelectedItems.Count == 0 ||
                     listViewPlaylistFiles.SelectedItems[0] == null)
                 {
@@ -63,9 +64,9 @@ namespace BDInfo
 
                 TSPlaylistFile playlist = null;
                 string playlistFileName = playlistItem.Text;
-                if (BDROM.PlaylistFiles.ContainsKey(playlistFileName))
+                if (_bdRomIso.PlaylistFiles.ContainsKey(playlistFileName))
                 {
-                    playlist = BDROM.PlaylistFiles[playlistFileName];
+                    playlist = _bdRomIso.PlaylistFiles[playlistFileName];
                 }
                 return playlist;
             }
@@ -86,10 +87,10 @@ namespace BDInfo
 
             listViewPlaylistFiles.Items.Clear();
 
-            if (BDROM == null) return;
+            if (_bdRomIso == null) return;
 
             foreach (TSPlaylistFile playlist
-                in BDROM.PlaylistFiles.Values)
+                in _bdRomIso.PlaylistFiles.Values)
             {
                 if (!playlist.IsValid) continue;
 
@@ -440,9 +441,9 @@ namespace BDInfo
             DialogResult = DialogResult.OK;
 
             TSPlaylistFile playlist = 
-                new TSPlaylistFile(BDROM, textBoxName.Text, StreamClips);
+                new TSPlaylistFile(_bdRomIso, textBoxName.Text, StreamClips);
 
-            BDROM.PlaylistFiles[playlist.Name] = playlist;
+            _bdRomIso.PlaylistFiles[playlist.Name] = playlist;
 
             OnFinished();
             Close();

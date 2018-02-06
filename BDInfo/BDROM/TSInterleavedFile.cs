@@ -21,7 +21,7 @@ using DiscUtils;
 
 // TODO: Do more interesting things here...
 
-namespace BDInfo
+namespace BDInfo.BDROM
 {
     public class TSInterleavedFile
     {

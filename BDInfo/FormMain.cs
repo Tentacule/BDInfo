@@ -27,7 +27,9 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using BDInfo.BDROM;
 using DiscUtils;
 using DiscUtils.Udf;
 
@@ -35,7 +37,7 @@ namespace BDInfo
 {
     public partial class FormMain : Form
     {
-        private BDROM BDROM = null;
+        private BdRomIso _bdRomIso = null;
         private int CustomPlaylistCount = 0;
         ScanBDROMResult ScanResult = new ScanBDROMResult();
 
@@ -80,19 +82,12 @@ namespace BDInfo
 
         private void FormMain_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop))
-            {
-                e.Effect = DragDropEffects.All;
-            }
-            else
-            {
-                e.Effect = DragDropEffects.None;
-            }
+            e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.All : DragDropEffects.None;
         }
 
         private void FormMain_DragDrop(object sender, DragEventArgs e)
         {
-            string[] sources = (string[])e.Data.GetData(DataFormats.FileDrop, false);
+            var sources = (string[])e.Data.GetData(DataFormats.FileDrop, false);
             if (sources.Length > 0)
             {
                 string path = sources[0];
@@ -101,9 +96,7 @@ namespace BDInfo
             }
         }
 
-        private void buttonBrowse_Click(
-            object sender,
-            EventArgs e)
+        private void buttonBrowse_Click(object sender, EventArgs e)
         {
             string path = null;
             try
@@ -155,9 +148,7 @@ namespace BDInfo
             }
         }
 
-        private void buttonSettings_Click(
-            object sender,
-            EventArgs e)
+        private void buttonSettings_Click(object sender, EventArgs e)
         {
             FormSettings settings = new FormSettings();
             settings.ShowDialog();
@@ -179,14 +170,12 @@ namespace BDInfo
             }
         }
 
-        private void buttonCustomPlaylist_Click(
-            object sender,
-            EventArgs e)
+        private void buttonCustomPlaylist_Click(object sender, EventArgs e)
         {
             string name = string.Format(
                 "USER.{0}", (++CustomPlaylistCount).ToString("D3"));
 
-            FormPlaylist form = new FormPlaylist(name, BDROM, OnCustomPlaylistAdded);
+            FormPlaylist form = new FormPlaylist(name, _bdRomIso, OnCustomPlaylistAdded);
             form.LoadPlaylists();
             form.Show();
         }
@@ -196,30 +185,22 @@ namespace BDInfo
             LoadPlaylists();
         }
 
-        private void buttonScan_Click(
-            object sender,
-            EventArgs e)
+        private void buttonScan_Click(object sender, EventArgs e)
         {
             ScanBDROM();
         }
 
-        private void buttonViewReport_Click(
-            object sender,
-            EventArgs e)
+        private void buttonViewReport_Click(object sender, EventArgs e)
         {
             GenerateReport();
         }
 
-        private void listViewPlaylistFiles_SelectedIndexChanged(
-            object sender,
-            EventArgs e)
+        private void listViewPlaylistFiles_SelectedIndexChanged(object sender, EventArgs e)
         {
             LoadPlaylist();
         }
 
-        private void listViewPlaylistFiles_ColumnClick(
-            object sender,
-            ColumnClickEventArgs e)
+        private void listViewPlaylistFiles_ColumnClick(object sender, ColumnClickEventArgs e)
         {
             if (e.Column == PlaylistColumnSorter.SortColumn)
             {
@@ -300,12 +281,11 @@ namespace BDInfo
 
         #endregion
 
-        #region BDROM Initialization Worker
+        #region BdRomIso Initialization Worker
 
         private BackgroundWorker InitBDROMWorker = null;
 
-        private void InitBDROM(
-            string path)
+        private void InitBDROM(string path)
         {
             ShowNotification("Please wait while we scan the disc...");
 
@@ -335,17 +315,15 @@ namespace BDInfo
             InitBDROMWorker.RunWorkerAsync(path);
         }
 
-        private void InitBDROMWork(
-            object sender,
-            DoWorkEventArgs e)
+        private void InitBDROMWork(object sender, DoWorkEventArgs e)
         {
             try
             {
-                BDROM = new BDROM((string)e.Argument);
-                BDROM.StreamClipFileScanError += new BDROM.OnStreamClipFileScanError(BDROM_StreamClipFileScanError);
-                BDROM.StreamFileScanError += new BDROM.OnStreamFileScanError(BDROM_StreamFileScanError);
-                BDROM.PlaylistFileScanError += new BDROM.OnPlaylistFileScanError(BDROM_PlaylistFileScanError);
-                BDROM.Scan();
+                _bdRomIso = new BdRomIso((string)e.Argument);
+                _bdRomIso.StreamClipFileScanError += new BdRomIso.OnStreamClipFileScanError(BDROM_StreamClipFileScanError);
+                _bdRomIso.StreamFileScanError += new BdRomIso.OnStreamFileScanError(BDROM_StreamFileScanError);
+                _bdRomIso.PlaylistFileScanError += new BdRomIso.OnPlaylistFileScanError(BDROM_PlaylistFileScanError);
+                _bdRomIso.Scan();
                 e.Result = null;
             }
             catch (Exception ex)
@@ -390,9 +368,7 @@ namespace BDInfo
         {
         }
 
-        private void InitBDROMCompleted(
-            object sender,
-            RunWorkerCompletedEventArgs e)
+        private void InitBDROMCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             HideNotification();
 
@@ -423,36 +399,36 @@ namespace BDInfo
             labelTimeElapsed.Text = "00:00:00";
             labelTimeRemaining.Text = "00:00:00";
 
-            //     textBoxSource.Text = BDROM.DirectoryRoot.FullName;
+            //     textBoxSource.Text = BdRomIso.DirectoryRoot.FullName;
 
             textBoxDetails.Text += string.Format(
                 "Detected BDMV Folder: {0} ({1}) {2}",
-                BDROM.DirectoryBDMV.FullName,
-                BDROM.VolumeLabel,
+                _bdRomIso.DirectoryBDMV.FullName,
+                _bdRomIso.VolumeLabel,
                 Environment.NewLine);
 
             List<string> features = new List<string>();
-            if (BDROM.Is50Hz)
+            if (_bdRomIso.Is50Hz)
             {
                 features.Add("50Hz Content");
             }
-            if (BDROM.IsBDPlus)
+            if (_bdRomIso.IsBDPlus)
             {
                 features.Add("BD+ Copy Protection");
             }
-            if (BDROM.IsBDJava)
+            if (_bdRomIso.IsBDJava)
             {
                 features.Add("BD-Java");
             }
-            if (BDROM.Is3D)
+            if (_bdRomIso.Is3D)
             {
                 features.Add("Blu-ray 3D");
             }
-            if (BDROM.IsDBOX)
+            if (_bdRomIso.IsDBOX)
             {
                 features.Add("D-BOX Motion Code");
             }
-            if (BDROM.IsPSP)
+            if (_bdRomIso.IsPSP)
             {
                 features.Add("PSP Digital Copy");
             }
@@ -463,7 +439,7 @@ namespace BDInfo
 
             textBoxDetails.Text += string.Format(
                 "Disc Size: {0:N0} bytes{1}",
-                BDROM.Size,
+                _bdRomIso.Size,
                 Environment.NewLine);
 
             LoadPlaylists();
@@ -479,15 +455,15 @@ namespace BDInfo
             listViewStreamFiles.Items.Clear();
             listViewStreams.Items.Clear();
 
-            if (BDROM == null) return;
+            if (_bdRomIso == null) return;
 
             bool hasHiddenTracks = false;
 
             //Dictionary<string, int> playlistGroup = new Dictionary<string, int>();
             List<List<TSPlaylistFile>> groups = new List<List<TSPlaylistFile>>();
 
-            TSPlaylistFile[] sortedPlaylistFiles = new TSPlaylistFile[BDROM.PlaylistFiles.Count];
-            BDROM.PlaylistFiles.Values.CopyTo(sortedPlaylistFiles, 0);
+            TSPlaylistFile[] sortedPlaylistFiles = new TSPlaylistFile[_bdRomIso.PlaylistFiles.Count];
+            _bdRomIso.PlaylistFiles.Values.CopyTo(sortedPlaylistFiles, 0);
             Array.Sort(sortedPlaylistFiles, ComparePlaylistFiles);
 
             foreach (TSPlaylistFile playlist1
@@ -537,7 +513,7 @@ namespace BDInfo
                 group.Sort(ComparePlaylistFiles);
 
                 foreach (TSPlaylistFile playlist in group)
-                //in BDROM.PlaylistFiles.Values)
+                //in BdRomIso.PlaylistFiles.Values)
                 {
                     if (!playlist.IsValid) continue;
 
@@ -631,7 +607,7 @@ namespace BDInfo
             listViewStreamFiles.Items.Clear();
             listViewStreams.Items.Clear();
 
-            if (BDROM == null) return;
+            if (_bdRomIso == null) return;
             if (listViewPlaylistFiles.SelectedItems.Count == 0) return;
 
             ListViewItem playlistItem = listViewPlaylistFiles.SelectedItems[0];
@@ -639,9 +615,9 @@ namespace BDInfo
 
             TSPlaylistFile playlist = null;
             string playlistFileName = playlistItem.Text;
-            if (BDROM.PlaylistFiles.ContainsKey(playlistFileName))
+            if (_bdRomIso.PlaylistFiles.ContainsKey(playlistFileName))
             {
-                playlist = BDROM.PlaylistFiles[playlistFileName];
+                playlist = _bdRomIso.PlaylistFiles[playlistFileName];
             }
             if (playlist == null) return;
 
@@ -806,10 +782,10 @@ namespace BDInfo
             foreach (ListViewItem item in listViewPlaylistFiles.Items)
             {
                 string playlistName = (string)item.SubItems[0].Tag;
-                if (BDROM.PlaylistFiles.ContainsKey(playlistName))
+                if (_bdRomIso.PlaylistFiles.ContainsKey(playlistName))
                 {
                     TSPlaylistFile playlist =
-                        BDROM.PlaylistFiles[playlistName];
+                        _bdRomIso.PlaylistFiles[playlistName];
                     item.SubItems[4].Text = string.Format(
                         "{0}", (playlist.TotalAngleSize).ToString("N0"));
                     item.SubItems[4].Tag = playlist.TotalAngleSize;
@@ -830,9 +806,9 @@ namespace BDInfo
 
             string selectedPlaylistName = (string)selectedPlaylistItem.SubItems[0].Tag;
             TSPlaylistFile selectedPlaylist = null;
-            if (BDROM.PlaylistFiles.ContainsKey(selectedPlaylistName))
+            if (_bdRomIso.PlaylistFiles.ContainsKey(selectedPlaylistName))
             {
-                selectedPlaylist = BDROM.PlaylistFiles[selectedPlaylistName];
+                selectedPlaylist = _bdRomIso.PlaylistFiles[selectedPlaylistName];
             }
             if (selectedPlaylist == null)
             {
@@ -878,21 +854,9 @@ namespace BDInfo
 
         #endregion
 
-        #region Scan BDROM
+        #region Scan BdRomIso
 
         private BackgroundWorker ScanBDROMWorker = null;
-
-        private class ScanBDROMState
-        {
-            public long TotalBytes = 0;
-            public long FinishedBytes = 0;
-            public DateTime TimeStarted = DateTime.Now;
-            public TSStreamFile StreamFile = null;
-            public Dictionary<string, List<TSPlaylistFile>> PlaylistMap =
-                new Dictionary<string, List<TSPlaylistFile>>();
-            public Exception Exception = null;
-            public UdfReader UdfReader;
-        }
 
         private void ScanBDROM()
         {
@@ -918,7 +882,7 @@ namespace BDInfo
                 listViewPlaylistFiles.CheckedItems.Count == 0)
             {
                 foreach (TSStreamFile streamFile
-                    in BDROM.StreamFiles.Values)
+                    in _bdRomIso.StreamFiles.Values)
                 {
                     streamFiles.Add(streamFile);
                 }
@@ -928,10 +892,10 @@ namespace BDInfo
                 foreach (ListViewItem item
                     in listViewPlaylistFiles.CheckedItems)
                 {
-                    if (BDROM.PlaylistFiles.ContainsKey(item.Text))
+                    if (_bdRomIso.PlaylistFiles.ContainsKey(item.Text))
                     {
                         TSPlaylistFile playlist =
-                            BDROM.PlaylistFiles[item.Text];
+                            _bdRomIso.PlaylistFiles[item.Text];
 
                         foreach (TSStreamClip clip
                             in playlist.StreamClips)
@@ -993,7 +957,7 @@ namespace BDInfo
                         }
 
                         foreach (TSPlaylistFile playlist
-                            in BDROM.PlaylistFiles.Values)
+                            in _bdRomIso.PlaylistFiles.Values)
                         {
                             playlist.ClearBitrates();
 
@@ -1083,9 +1047,7 @@ namespace BDInfo
             catch { }
         }
 
-        private void ScanBDROMProgress(
-            object sender,
-            ProgressChangedEventArgs e)
+        private void ScanBDROMProgress(object sender, ProgressChangedEventArgs e)
         {
             ScanBDROMState scanState = (ScanBDROMState)e.UserState;
 
@@ -1207,9 +1169,9 @@ namespace BDInfo
                 foreach (ListViewItem item
                     in listViewPlaylistFiles.Items)
                 {
-                    if (BDROM.PlaylistFiles.ContainsKey(item.Text))
+                    if (_bdRomIso.PlaylistFiles.ContainsKey(item.Text))
                     {
-                        playlists.Add(BDROM.PlaylistFiles[item.Text]);
+                        playlists.Add(_bdRomIso.PlaylistFiles[item.Text]);
                     }
                 }
             }
@@ -1218,9 +1180,9 @@ namespace BDInfo
                 foreach (ListViewItem item
                     in listViewPlaylistFiles.CheckedItems)
                 {
-                    if (BDROM.PlaylistFiles.ContainsKey(item.Text))
+                    if (_bdRomIso.PlaylistFiles.ContainsKey(item.Text))
                     {
-                        playlists.Add(BDROM.PlaylistFiles[item.Text]);
+                        playlists.Add(_bdRomIso.PlaylistFiles[item.Text]);
                     }
                 }
             }
@@ -1242,7 +1204,7 @@ namespace BDInfo
             {
                 List<TSPlaylistFile> playlists = (List<TSPlaylistFile>)e.Argument;
                 FormReport report = new FormReport();
-                report.Generate(BDROM, playlists, ScanResult);
+                report.Generate(_bdRomIso, playlists, ScanResult);
                 e.Result = report;
             }
             catch (Exception ex)
@@ -1342,9 +1304,7 @@ namespace BDInfo
 
         #endregion
 
-        public static int ComparePlaylistFiles(
-            TSPlaylistFile x,
-            TSPlaylistFile y)
+        public static int ComparePlaylistFiles(TSPlaylistFile x, TSPlaylistFile y)
         {
             if (x == null && y == null)
             {
@@ -1374,74 +1334,5 @@ namespace BDInfo
                 }
             }
         }
-    }
-
-    public class ListViewColumnSorter : IComparer
-    {
-        private int ColumnToSort;
-        private SortOrder OrderOfSort;
-        private CaseInsensitiveComparer ObjectCompare;
-
-        public ListViewColumnSorter()
-        {
-            ColumnToSort = 0;
-            OrderOfSort = SortOrder.None;
-            ObjectCompare = new CaseInsensitiveComparer();
-        }
-
-        public int Compare(
-            object x,
-            object y)
-        {
-            ListViewItem listviewX = (ListViewItem)x;
-            ListViewItem listviewY = (ListViewItem)y;
-
-            int compareResult = ObjectCompare.Compare(
-                listviewX.SubItems[ColumnToSort].Tag,
-                listviewY.SubItems[ColumnToSort].Tag);
-
-            if (OrderOfSort == SortOrder.Ascending)
-            {
-                return compareResult;
-            }
-            else if (OrderOfSort == SortOrder.Descending)
-            {
-                return (-compareResult);
-            }
-            else
-            {
-                return 0;
-            }
-        }
-
-        public int SortColumn
-        {
-            set
-            {
-                ColumnToSort = value;
-            }
-            get
-            {
-                return ColumnToSort;
-            }
-        }
-
-        public SortOrder Order
-        {
-            set
-            {
-                OrderOfSort = value;
-            }
-            get
-            {
-                return OrderOfSort;
-            }
-        }
-    }
-
-    public class ScanBDROMResult
-    {
-        public Exception ScanException = new Exception("Scan has not been run.");
-        public Dictionary<string, Exception> FileExceptions = new Dictionary<string, Exception>();
     }
 }

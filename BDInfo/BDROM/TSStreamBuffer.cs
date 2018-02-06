@@ -18,13 +18,10 @@
 //=============================================================================
 
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.IO;
-using System.Text;
 
-namespace BDInfo
+namespace BDInfo.BDROM
 {
     public class TSStreamBuffer
     {
@@ -40,21 +37,9 @@ namespace BDInfo
             Stream = new MemoryStream(Buffer);
         }
 
-        public long Length
-        {
-            get
-            {
-                return (long)BufferLength;
-            }
-        }
+        public long Length => (long)BufferLength;
 
-        public long Position
-        {
-            get
-            {
-                return Stream.Position;
-            }
-        }
+        public long Position => Stream.Position;
 
         public void Add(
             byte[] buffer,
