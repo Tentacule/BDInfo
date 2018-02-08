@@ -23,7 +23,6 @@ using System.IO;
 using BDInfo.Utilities;
 using DiscUtils;
 using DiscUtils.Udf;
-using DiscUtils.Vfs;
 
 namespace BDInfo.BDROM
 {
@@ -73,15 +72,24 @@ namespace BDInfo.BDROM
 
         public event OnPlaylistFileScanError PlaylistFileScanError;
 
+        private Stream _isoStream;
+
         public BdRomIso(string path)
         {
             Path = path;
         }
+        
+        private void CloseIsoStream()
+        {
+            _isoStream?.Close();
+            _isoStream = null;
+        }
 
         public void Scan()
         {
-            using (var isoStream = File.Open(Path, FileMode.Open))
-            using (var fileSystem = new UdfReader(isoStream))
+            CloseIsoStream();
+
+            using (var fileSystem = FileSystemUtilities.GetFileSystem(Path, ref _isoStream))
             {
                 // Locate BDMV directories.
                 SetBdmvDirectories(fileSystem);
@@ -96,6 +104,8 @@ namespace BDInfo.BDROM
                 ScanPlaylist(fileSystem);
                 ScanFor50HzContent();
             }
+
+            CloseIsoStream();
         }
 
         private void SetBdmvDirectories(DiscFileSystem fileSystem)

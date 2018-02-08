@@ -84,6 +84,7 @@ namespace BDInfo
             this.columnHeaderBitrate = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.columnHeaderDescription = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.buttonRescan = new System.Windows.Forms.Button();
+            this.button1 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainerOuter)).BeginInit();
             this.splitContainerOuter.Panel1.SuspendLayout();
             this.splitContainerOuter.Panel2.SuspendLayout();
@@ -97,13 +98,13 @@ namespace BDInfo
             // buttonBrowse
             // 
             this.buttonBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.buttonBrowse.Location = new System.Drawing.Point(416, 23);
+            this.buttonBrowse.Location = new System.Drawing.Point(350, 23);
             this.buttonBrowse.Name = "buttonBrowse";
-            this.buttonBrowse.Size = new System.Drawing.Size(75, 23);
+            this.buttonBrowse.Size = new System.Drawing.Size(60, 23);
             this.buttonBrowse.TabIndex = 1;
-            this.buttonBrowse.Text = "Browse...";
+            this.buttonBrowse.Text = "ISO";
             this.buttonBrowse.UseVisualStyleBackColor = true;
-            this.buttonBrowse.Click += new System.EventHandler(this.buttonBrowse_Click);
+            this.buttonBrowse.Click += new System.EventHandler(this.buttonIso_Click);
             // 
             // textBoxSource
             // 
@@ -111,7 +112,7 @@ namespace BDInfo
             | System.Windows.Forms.AnchorStyles.Right)));
             this.textBoxSource.Location = new System.Drawing.Point(17, 24);
             this.textBoxSource.Name = "textBoxSource";
-            this.textBoxSource.Size = new System.Drawing.Size(393, 20);
+            this.textBoxSource.Size = new System.Drawing.Size(326, 20);
             this.textBoxSource.TabIndex = 0;
             this.textBoxSource.TextChanged += new System.EventHandler(this.textBoxSource_TextChanged);
             // 
@@ -463,12 +464,24 @@ namespace BDInfo
             this.buttonRescan.UseVisualStyleBackColor = true;
             this.buttonRescan.Click += new System.EventHandler(this.buttonRescan_Click);
             // 
+            // button1
+            // 
+            this.button1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.button1.Location = new System.Drawing.Point(416, 23);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(75, 23);
+            this.button1.TabIndex = 39;
+            this.button1.Text = "Browse...";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.buttonBrowse_Click);
+            // 
             // FormMain
             // 
             this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(584, 575);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.buttonRescan);
             this.Controls.Add(this.splitContainerOuter);
             this.Controls.Add(this.buttonCustomPlaylist);
@@ -548,5 +561,6 @@ namespace BDInfo
         private System.Windows.Forms.Button buttonRescan;
         private System.Windows.Forms.ColumnHeader columnHeaderPlaylistGroup;
         private System.Windows.Forms.ColumnHeader columnHeaderIndex;
+        private System.Windows.Forms.Button button1;
     }
 }

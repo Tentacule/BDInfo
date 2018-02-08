@@ -139,6 +139,7 @@
     </Compile>
     <Compile Include="Utilities\BytesReaderUtilities.cs" />
     <Compile Include="Utilities\ComparerUtilities.cs" />
+    <Compile Include="Utilities\FileSystemUtilities.cs" />
     <EmbeddedResource Include="FormChart.resx">
       <DependentUpon>FormChart.cs</DependentUpon>
     </EmbeddedResource>

@@ -97,7 +97,7 @@ namespace BDInfo
             }
         }
 
-        private void buttonBrowse_Click(object sender, EventArgs e)
+        private void buttonIso_Click(object sender, EventArgs e)
         {
             string path = null;
             try
@@ -112,6 +112,37 @@ namespace BDInfo
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
                     path = dialog.FileName;
+                    textBoxSource.Text = path;
+                    InitBDROM(path);
+                }
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format(
+                    "Error opening path {0}: {1}{2}",
+                    path,
+                    ex.Message,
+                    Environment.NewLine);
+
+                MessageBox.Show(msg, "BDInfo Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        private void buttonBrowse_Click(object sender, EventArgs e)
+        {
+            string path = null;
+            try
+            {
+                FolderBrowserDialog dialog = new FolderBrowserDialog();
+                dialog.Description = "Select a Blu-ray Folder:";
+                dialog.ShowNewFolderButton = false;
+                if (!string.IsNullOrEmpty(textBoxSource.Text))
+                {
+                    dialog.SelectedPath = textBoxSource.Text;
+                }
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    path = dialog.SelectedPath;
                     textBoxSource.Text = path;
                     InitBDROM(path);
                 }
@@ -933,6 +964,8 @@ namespace BDInfo
             ScanResult.ScanException = new Exception("Scan is still running.");
 
             System.Threading.Timer timer = null;
+            Stream isoStream = null;
+
             try
             {
                 List<TSStreamFile> streamFiles =
@@ -941,11 +974,11 @@ namespace BDInfo
                 ScanBDROMState scanState = new ScanBDROMState();
 
                 string path = textBoxSource.Text;
-                using (FileStream isoStream = File.Open(path, FileMode.Open))
-                using (DiscFileSystem fileSystem = new UdfReader(isoStream))
+
+                using (DiscFileSystem fileSystem = FileSystemUtilities.GetFileSystem(path,  ref isoStream))
                 {
                     scanState.FileSystem = fileSystem;
-
+                    
                     foreach (TSStreamFile streamFile in streamFiles)
                     {
                         if (BDInfoSettings.EnableSSIF &&
@@ -1016,6 +1049,7 @@ namespace BDInfo
             }
             finally
             {
+                isoStream?.Close();
                 if (timer != null)
                 {
                     timer.Dispose();
