@@ -878,12 +878,24 @@ namespace BDInfo
             buttonBrowse.Enabled = false;
             buttonRescan.Enabled = false;
 
+            List<TSStreamFile> streamFiles = GetSelectedStreamFiles();
+
+            ScanBDROMWorker = new BackgroundWorker();
+            ScanBDROMWorker.WorkerReportsProgress = true;
+            ScanBDROMWorker.WorkerSupportsCancellation = true;
+            ScanBDROMWorker.DoWork += ScanBDROMWork;
+            ScanBDROMWorker.ProgressChanged += ScanBDROMProgress;
+            ScanBDROMWorker.RunWorkerCompleted += ScanBDROMCompleted;
+            ScanBDROMWorker.RunWorkerAsync(streamFiles);
+        }
+
+        private List<TSStreamFile> GetSelectedStreamFiles()
+        {
             List<TSStreamFile> streamFiles = new List<TSStreamFile>();
             if (listViewPlaylistFiles.CheckedItems == null ||
                 listViewPlaylistFiles.CheckedItems.Count == 0)
             {
-                foreach (TSStreamFile streamFile
-                    in _bdRomIso.StreamFiles.Values)
+                foreach (var streamFile in _bdRomIso.StreamFiles.Values)
                 {
                     streamFiles.Add(streamFile);
                 }
@@ -910,13 +922,7 @@ namespace BDInfo
                 }
             }
 
-            ScanBDROMWorker = new BackgroundWorker();
-            ScanBDROMWorker.WorkerReportsProgress = true;
-            ScanBDROMWorker.WorkerSupportsCancellation = true;
-            ScanBDROMWorker.DoWork += ScanBDROMWork;
-            ScanBDROMWorker.ProgressChanged += ScanBDROMProgress;
-            ScanBDROMWorker.RunWorkerCompleted += ScanBDROMCompleted;
-            ScanBDROMWorker.RunWorkerAsync(streamFiles);
+            return streamFiles;
         }
 
         private void ScanBDROMWork(
@@ -936,20 +942,20 @@ namespace BDInfo
 
                 string path = textBoxSource.Text;
                 using (FileStream isoStream = File.Open(path, FileMode.Open))
+                using (DiscFileSystem fileSystem = new UdfReader(isoStream))
                 {
-                    UdfReader bluray = new UdfReader(isoStream);
-                    scanState.UdfReader = bluray;
+                    scanState.FileSystem = fileSystem;
 
                     foreach (TSStreamFile streamFile in streamFiles)
                     {
                         if (BDInfoSettings.EnableSSIF &&
                             streamFile.InterleavedFile != null)
                         {
-                            scanState.TotalBytes += GetDiscFileInfo(bluray, streamFile.InterleavedFile.FileInfo.FullName).Length;
+                            scanState.TotalBytes += GetDiscFileInfo(fileSystem, streamFile.InterleavedFile.FileInfo.FullName).Length;
                         }
                         else
                         {
-                            scanState.TotalBytes += GetDiscFileInfo(bluray, streamFile.FileInfo.FullName).Length;
+                            scanState.TotalBytes += GetDiscFileInfo(fileSystem, streamFile.FileInfo.FullName).Length;
                         }
 
                         if (!scanState.PlaylistMap.ContainsKey(streamFile.Name))
@@ -994,7 +1000,7 @@ namespace BDInfo
                             }
                             Thread.Sleep(0);
                         }
-                        scanState.FinishedBytes += GetDiscFileInfo(bluray, streamFile.FileInfo.FullName).Length;
+                        scanState.FinishedBytes += GetDiscFileInfo(fileSystem, streamFile.FileInfo.FullName).Length;
 
                         if (scanState.Exception != null)
                         {
@@ -1026,7 +1032,7 @@ namespace BDInfo
                 TSStreamFile streamFile = scanState.StreamFile;
                 List<TSPlaylistFile> playlists = scanState.PlaylistMap[streamFile.Name];
 
-                streamFile.Scan(scanState.UdfReader, playlists, true);
+                streamFile.Scan(scanState.FileSystem, playlists, true);
             }
             catch (Exception ex)
             {
@@ -1147,9 +1153,9 @@ namespace BDInfo
             buttonScan.Text = "Scan Bitrates";
         }
 
-        public DiscFileInfo GetDiscFileInfo(UdfReader bluray, string fullName)
+        public DiscFileInfo GetDiscFileInfo(DiscFileSystem fileSystem, string fullName)
         {
-            return bluray.GetFileInfo(fullName);
+            return fileSystem.GetFileInfo(fullName);
         }
 
         #endregion

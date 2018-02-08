@@ -22,7 +22,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using DiscUtils;
-using DiscUtils.Udf;
 
 namespace BDInfo.BDROM
 {
@@ -319,7 +318,7 @@ namespace BDInfo.BDROM
             streamState.WindowBytes = 0;
         }
 
-        public void Scan(UdfReader udfReader, List<TSPlaylistFile> playlists, bool isFullScan)
+        public void Scan(DiscFileSystem fileSystem, List<TSPlaylistFile> playlists, bool isFullScan)
         {
             if (playlists == null || playlists.Count == 0)
             {
@@ -337,11 +336,11 @@ namespace BDInfo.BDROM
                 if (BDInfoSettings.EnableSSIF &&
                     InterleavedFile != null)
                 {
-                    tempFile = udfReader.GetFileInfo(InterleavedFile.FileInfo.FullName);
+                    tempFile = fileSystem.GetFileInfo(InterleavedFile.FileInfo.FullName);
                 }
                 else
                 {
-                    tempFile = udfReader.GetFileInfo(FileInfo.FullName);
+                    tempFile = fileSystem.GetFileInfo(FileInfo.FullName);
                 }
 
 

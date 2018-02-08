@@ -23,6 +23,7 @@ using System.IO;
 using BDInfo.Utilities;
 using DiscUtils;
 using DiscUtils.Udf;
+using DiscUtils.Vfs;
 
 namespace BDInfo.BDROM
 {
@@ -80,26 +81,26 @@ namespace BDInfo.BDROM
         public void Scan()
         {
             using (var isoStream = File.Open(Path, FileMode.Open))
-            using (var udfReader = new UdfReader(isoStream))
+            using (var fileSystem = new UdfReader(isoStream))
             {
                 // Locate BDMV directories.
-                SetBdmvDirectories(udfReader);
+                SetBdmvDirectories(fileSystem);
 
                 // Initialize basic disc properties.
-                SetBdmvProperties(udfReader);
+                SetBdmvProperties(fileSystem);
 
                 // Scan bdrom files
                 InitializeFileLists();
                 ScanStreamClips();
                 ScanInterleavedFiles();
-                ScanPlaylist(udfReader);
+                ScanPlaylist(fileSystem);
                 ScanFor50HzContent();
             }
         }
 
-        private void SetBdmvDirectories(UdfReader udfReader)
+        private void SetBdmvDirectories(DiscFileSystem fileSystem)
         {
-            DirectoryBDMV = GetDirectory("BDMV", udfReader.Root, 0);
+            DirectoryBDMV = GetDirectory("BDMV", fileSystem.Root, 0);
 
             if (DirectoryBDMV == null)
             {
@@ -128,9 +129,9 @@ namespace BDInfo.BDROM
             }
         }
 
-        private void SetBdmvProperties(UdfReader udfReader)
+        private void SetBdmvProperties(DiscFileSystem fileSystem)
         {
-            VolumeLabel = udfReader.VolumeLabel;
+            VolumeLabel = fileSystem.VolumeLabel;
             Size = (ulong)GetDirectorySize(DirectoryRoot);
 
             if (null != GetDirectory("BDSVM", DirectoryRoot, 0))
@@ -271,7 +272,7 @@ namespace BDInfo.BDROM
             }
         }
 
-        private void ScanPlaylist(UdfReader udfReader)
+        private void ScanPlaylist(DiscFileSystem fileSystem)
         {
             TSStreamFile[] streamFiles = new TSStreamFile[StreamFiles.Count];
             StreamFiles.Values.CopyTo(streamFiles, 0);
@@ -319,7 +320,7 @@ namespace BDInfo.BDROM
                             }
                         }
                     }
-                    streamFile.Scan(udfReader, playlists, false);
+                    streamFile.Scan(fileSystem, playlists, false);
                 }
                 catch (Exception ex)
                 {

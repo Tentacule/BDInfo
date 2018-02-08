@@ -20,7 +20,7 @@
 using System;
 using System.Collections.Generic;
 using BDInfo.BDROM;
-using DiscUtils.Udf;
+using DiscUtils;
 
 namespace BDInfo
 {
@@ -35,7 +35,7 @@ namespace BDInfo
             public Dictionary<string, List<TSPlaylistFile>> PlaylistMap =
                 new Dictionary<string, List<TSPlaylistFile>>();
             public Exception Exception = null;
-            public UdfReader UdfReader;
+            public DiscFileSystem FileSystem;
         }
     }
 }
