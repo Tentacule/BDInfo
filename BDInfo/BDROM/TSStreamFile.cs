@@ -1368,6 +1368,7 @@ namespace BDInfo.BDROM
                 case TSStreamType.MPEG1_VIDEO:
                 case TSStreamType.MPEG2_VIDEO:
                 case TSStreamType.VC1_VIDEO:
+                case TSStreamType.HEVC_VIDEO:
                     {
                         stream = new TSVideoStream();
                     }

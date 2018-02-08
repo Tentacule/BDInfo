@@ -69,7 +69,8 @@ namespace BDInfo
                 
                 FileType = ASCIIEncoding.ASCII.GetString(fileType);
                 if (FileType != "HDMV0100" &&
-                    FileType != "HDMV0200")
+                    FileType != "HDMV0200" &&
+                    FileType != "HDMV0300")
                 {
                     throw new Exception(string.Format(
                         "Clip info file {0} has an unknown file type {1}.",
@@ -124,7 +125,8 @@ namespace BDInfo
                         case TSStreamType.MPEG1_VIDEO:
                         case TSStreamType.MPEG2_VIDEO:
                         case TSStreamType.VC1_VIDEO:
-                        {
+                        case TSStreamType.HEVC_VIDEO:
+                            {
                             TSVideoFormat videoFormat = (TSVideoFormat)
                                 (clipData[streamOffset + 2] >> 4);
                             TSFrameRate frameRate = (TSFrameRate)

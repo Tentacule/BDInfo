@@ -311,6 +311,8 @@ namespace BDInfo.Utilities
                     return 4;
                 case TSStreamType.MVC_VIDEO:
                     return 5;
+                case TSStreamType.HEVC_VIDEO:
+                    return 6;
 
                 case TSStreamType.MPEG1_AUDIO:
                     return 1;
