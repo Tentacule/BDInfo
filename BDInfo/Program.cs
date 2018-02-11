@@ -18,22 +18,49 @@
 //=============================================================================
 
 using System;
-using System.Collections.Generic;
+using System.Threading;
 using System.Windows.Forms;
+using BDInfo.Cli;
+using BDInfo.Scanner;
 
 namespace BDInfo
 {
     static class Program
     {
+
+        public static string BDInfoVersion = Application.ProductVersion;
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
         static void Main(string[] args)
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new FormMain(args));
+            var arguments = CommandLineArguments.ParseArguments(args);
+
+            if (arguments.QuickScan || arguments.ScanBitrates)
+            {
+                CommandLineScan(arguments);
+            }
+            else
+            {
+                string[] formArguments = { arguments.InputPath };
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new FormMain(formArguments));
+            }
+        }
+
+        private static void CommandLineScan(CommandLineArguments arguments)
+        {
+            var scanner = new BdRomIsoScanner(arguments.InputPath);
+            scanner.Scan();
+
+            while (scanner.worker.IsBusy)
+            {
+                Thread.Sleep(50);
+                Application.DoEvents();
+            }
         }
     }
 }

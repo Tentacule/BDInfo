@@ -20,9 +20,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using BDInfo.Scanner;
 using BDInfo.Utilities;
 using DiscUtils;
-using DiscUtils.Udf;
 
 namespace BDInfo.BDROM
 {
@@ -50,15 +51,18 @@ namespace BDInfo.BDROM
 
         public Dictionary<string, TSPlaylistFile> PlaylistFiles =
             new Dictionary<string, TSPlaylistFile>();
+
         public Dictionary<string, TSStreamClipFile> StreamClipFiles =
             new Dictionary<string, TSStreamClipFile>();
+
         public Dictionary<string, TSStreamFile> StreamFiles =
             new Dictionary<string, TSStreamFile>();
+
         public Dictionary<string, TSInterleavedFile> InterleavedFiles =
             new Dictionary<string, TSInterleavedFile>();
 
         public delegate bool OnStreamClipFileScanError(
-                TSStreamClipFile streamClipFile, Exception ex);
+            TSStreamClipFile streamClipFile, Exception ex);
 
         public event OnStreamClipFileScanError StreamClipFileScanError;
 
@@ -74,11 +78,15 @@ namespace BDInfo.BDROM
 
         private Stream _isoStream;
 
+        public CancellationToken CancellationToken { get; set; }
+        public delegate void ScanEventHandler(object sender, ScanBitratesEventArgs e);
+        public event ScanEventHandler ScanBitratesProgress;
+
         public BdRomIso(string path)
         {
             Path = path;
         }
-        
+
         private void CloseIsoStream()
         {
             _isoStream?.Close();
@@ -418,5 +426,126 @@ namespace BDInfo.BDROM
 
             return size;
         }
+
+        public DiscFileInfo GetDiscFileInfo(DiscFileSystem fileSystem, string fullName)
+        {
+            return fileSystem.GetFileInfo(fullName);
+        }
+
+        #region ScanBitrates
+
+        public ScanBDROMResult ScanBitrates(List<TSStreamFile> streamFiles)
+        {
+            ScanBDROMResult scanResult = new ScanBDROMResult { ScanException = new Exception("Scan is still running.") };
+            ScanBDROMState scanState = new ScanBDROMState();
+
+            Timer timer = null;
+            Stream isoStream = null;
+
+            try
+            {
+                using (var fileSystem = FileSystemUtilities.GetFileSystem(Path, ref isoStream))
+                {
+                    scanState.FileSystem = fileSystem;
+
+                    foreach (var streamFile in streamFiles)
+                    {
+                        if (BDInfoSettings.EnableSSIF &&
+                            streamFile.InterleavedFile != null)
+                        {
+                            scanState.TotalBytes += GetDiscFileInfo(fileSystem, streamFile.InterleavedFile.FileInfo.FullName).Length;
+                        }
+                        else
+                        {
+                            scanState.TotalBytes += GetDiscFileInfo(fileSystem, streamFile.FileInfo.FullName).Length;
+                        }
+
+                        if (!scanState.PlaylistMap.ContainsKey(streamFile.Name))
+                        {
+                            scanState.PlaylistMap[streamFile.Name] = new List<TSPlaylistFile>();
+                        }
+
+                        foreach (TSPlaylistFile playlist in PlaylistFiles.Values)
+                        {
+                            playlist.ClearBitrates();
+
+                            foreach (TSStreamClip clip in playlist.StreamClips)
+                            {
+                                if (clip.Name == streamFile.Name)
+                                {
+                                    if (!scanState.PlaylistMap[streamFile.Name].Contains(playlist))
+                                    {
+                                        scanState.PlaylistMap[streamFile.Name].Add(playlist);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    timer = new Timer(ScanBDROMEvent, scanState, 1000, 1000);
+
+                    foreach (TSStreamFile streamFile in streamFiles)
+                    {
+                        scanState.StreamFile = streamFile;
+
+                        Thread thread = new Thread(ScanBDROMThread);
+
+                        thread.Start(scanState);
+                        while (thread.IsAlive)
+                        {
+                            if (CancellationToken.IsCancellationRequested)
+                            {
+                                scanResult.ScanException = new Exception("Scan was cancelled.");
+                                thread.Abort();
+                                thread.Join();
+                                return scanResult;
+                            }
+                            Thread.Sleep(0);
+                        }
+                        scanState.FinishedBytes += GetDiscFileInfo(fileSystem, streamFile.FileInfo.FullName).Length;
+
+                        if (scanState.Exception != null)
+                        {
+                            scanResult.FileExceptions[streamFile.Name] = scanState.Exception;
+                        }
+                    }
+                    scanResult.ScanException = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                scanResult.ScanException = ex;
+            }
+            finally
+            {
+                isoStream?.Close();
+                timer?.Dispose();
+            }
+
+            return scanResult;
+        }
+
+        private static void ScanBDROMThread(object parameter)
+        {
+            ScanBDROMState scanState = (ScanBDROMState)parameter;
+            try
+            {
+                TSStreamFile streamFile = scanState.StreamFile;
+                List<TSPlaylistFile> playlists = scanState.PlaylistMap[streamFile.Name];
+
+                streamFile.Scan(scanState.FileSystem, playlists, true);
+            }
+            catch (Exception ex)
+            {
+                scanState.Exception = ex;
+            }
+        }
+
+        private void ScanBDROMEvent(object state)
+        {
+            ScanBitratesProgress?.Invoke(this, new ScanBitratesEventArgs(null, (ScanBDROMState)state));
+        }
+
+        #endregion
     }
 }

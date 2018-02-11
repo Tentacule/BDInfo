@@ -18,29 +18,23 @@
 //=============================================================================
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Diagnostics;
 using System.Drawing;
-using System.IO;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using BDInfo.BDROM;
+using BDInfo.Scanner;
 using BDInfo.Utilities;
-using DiscUtils;
-using DiscUtils.Udf;
 
 namespace BDInfo
 {
     public partial class FormMain : Form
     {
         private BdRomIso _bdRomIso = null;
+        private ScanBDROMResult _scanResult = null;
+
         private int CustomPlaylistCount = 0;
-        ScanBDROMResult ScanResult = new ScanBDROMResult();
+        private BdRomIsoScanner _scanner;
 
         #region UI Handlers
 
@@ -54,9 +48,9 @@ namespace BDInfo
             listViewPlaylistFiles.ListViewItemSorter = PlaylistColumnSorter;
             if (args.Length > 0)
             {
-                string path = args[0];
+                var path = args[0];
                 textBoxSource.Text = path;
-                InitBDROM(path);
+                StartScan(path);
             }
             else
             {
@@ -91,9 +85,9 @@ namespace BDInfo
             var sources = (string[])e.Data.GetData(DataFormats.FileDrop, false);
             if (sources.Length > 0)
             {
-                string path = sources[0];
+                var path = sources[0];
                 textBoxSource.Text = path;
-                InitBDROM(path);
+                StartScan(path);
             }
         }
 
@@ -113,7 +107,7 @@ namespace BDInfo
                 {
                     path = dialog.FileName;
                     textBoxSource.Text = path;
-                    InitBDROM(path);
+                    StartScan(path);
                 }
             }
             catch (Exception ex)
@@ -128,6 +122,7 @@ namespace BDInfo
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
         private void buttonBrowse_Click(object sender, EventArgs e)
         {
             string path = null;
@@ -144,7 +139,7 @@ namespace BDInfo
                 {
                     path = dialog.SelectedPath;
                     textBoxSource.Text = path;
-                    InitBDROM(path);
+                    StartScan(path);
                 }
             }
             catch (Exception ex)
@@ -165,7 +160,7 @@ namespace BDInfo
             string path = textBoxSource.Text;
             try
             {
-                InitBDROM(path);
+                StartScan(path);
             }
             catch (Exception ex)
             {
@@ -178,6 +173,267 @@ namespace BDInfo
                 MessageBox.Show(msg, "BDInfo Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void StartScan(string path)
+        {
+            ShowNotification("Please wait while we scan the disc...");
+
+            CustomPlaylistCount = 0;
+            buttonBrowse.Enabled = false;
+            buttonRescan.Enabled = false;
+            buttonSelectAll.Enabled = false;
+            buttonUnselectAll.Enabled = false;
+            buttonCustomPlaylist.Enabled = false;
+            buttonScan.Enabled = false;
+            buttonViewReport.Enabled = false;
+            textBoxDetails.Enabled = false;
+            listViewPlaylistFiles.Enabled = false;
+            listViewStreamFiles.Enabled = false;
+            listViewStreams.Enabled = false;
+            textBoxDetails.Clear();
+            listViewPlaylistFiles.Items.Clear();
+            listViewStreamFiles.Items.Clear();
+            listViewStreams.Items.Clear();
+
+            _scanner = new BdRomIsoScanner(path);
+            _scanner.ScanStreamClipFileError += OnStreamClipFileScanError;
+            _scanner.ScanPlaylistFileError += OnPlaylistFileScanError;
+            _scanner.ScanStreamFileError += OnStreamFileScanError;
+            _scanner.ScanBitratesProgress += ScanBitratesProgress;
+            _scanner.ScanBitratesCompleted += ScanBitratesOnScanCompleted;
+
+            _scanner.ScanCompleted += ScannerOnScanCompleted;
+            _scanner.Scan();
+        }
+
+        private void StartScanBitrates(List<TSStreamFile> streamFiles)
+        {
+            if (_scanner != null)
+            {
+
+                buttonScan.Text = "Cancel Scan";
+                progressBarScan.Value = 0;
+                progressBarScan.Minimum = 0;
+                progressBarScan.Maximum = 100;
+                labelProgress.Text = "Scanning disc...";
+                labelTimeElapsed.Text = "00:00:00";
+                labelTimeRemaining.Text = "00:00:00";
+                buttonBrowse.Enabled = false;
+                buttonRescan.Enabled = false;
+                button1.Enabled = false;
+
+                _scanner.ScanBitrates(streamFiles);
+            }
+        }
+
+        private void OnPlaylistFileScanError(object sender, ScannerErrorEventArgs e)
+        {
+            DialogResult result = MessageBox.Show(string.Format(
+                    "An error occurred while scanning the playlist file {0}.\n\nThe disc may be copy-protected or damaged.\n\nDo you want to continue scanning the playlist files?", e.PlaylistFile.Name),
+                "BDInfo Scan Error", MessageBoxButtons.YesNo);
+
+            e.ContinueScan = (result == DialogResult.Yes);
+        }
+
+        private void OnStreamFileScanError(object sender, ScannerErrorEventArgs e)
+        {
+            DialogResult result = MessageBox.Show(string.Format(
+                    "An error occurred while scanning the stream file {0}.\n\nThe disc may be copy-protected or damaged.\n\nDo you want to continue scanning the stream files?", e.StreamFile.Name),
+                "BDInfo Scan Error", MessageBoxButtons.YesNo);
+
+            e.ContinueScan = (result == DialogResult.Yes);
+        }
+
+        private void OnStreamClipFileScanError(object sender, ScannerErrorEventArgs e)
+        {
+            DialogResult result = MessageBox.Show(string.Format(
+                    "An error occurred while scanning the stream clip file {0}.\n\nThe disc may be copy-protected or damaged.\n\nDo you want to continue scanning the stream clip files?", e.StreamClipFile.Name),
+                "BDInfo Scan Error", MessageBoxButtons.YesNo);
+
+            e.ContinueScan = (result == DialogResult.Yes);
+        }
+
+        private void ScannerOnScanCompleted(object sender, ScannerEventArgs e)
+        {
+            HideNotification();
+
+            BdRomIso bdRomIso = e.BdRomIso;
+            _bdRomIso = bdRomIso;
+
+
+            if (e.Exception != null)
+            {
+                string msg = string.Format(
+                    "{0}", e.Exception.Message);
+                MessageBox.Show(msg, "BDInfo Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                buttonBrowse.Enabled = true;
+                buttonRescan.Enabled = true;
+                button1.Enabled = true;
+                return;
+            }
+
+            buttonBrowse.Enabled = true;
+            buttonRescan.Enabled = true;
+            buttonScan.Enabled = true;
+            buttonSelectAll.Enabled = true;
+            buttonUnselectAll.Enabled = true;
+            buttonCustomPlaylist.Enabled = true;
+            buttonViewReport.Enabled = true;
+            textBoxDetails.Enabled = true;
+            listViewPlaylistFiles.Enabled = true;
+            listViewStreamFiles.Enabled = true;
+            listViewStreams.Enabled = true;
+            progressBarScan.Value = 0;
+            labelProgress.Text = "";
+            labelTimeElapsed.Text = "00:00:00";
+            labelTimeRemaining.Text = "00:00:00";
+
+            //     textBoxSource.Text = BdRomIso.DirectoryRoot.FullName;
+
+            textBoxDetails.Text += string.Format(
+                "Detected BDMV Folder: {0} ({1}) {2}",
+                bdRomIso.DirectoryBDMV.FullName,
+                bdRomIso.VolumeLabel,
+                Environment.NewLine);
+
+            List<string> features = new List<string>();
+            if (bdRomIso.Is50Hz)
+            {
+                features.Add("50Hz Content");
+            }
+            if (bdRomIso.IsBDPlus)
+            {
+                features.Add("BD+ Copy Protection");
+            }
+            if (bdRomIso.IsBDJava)
+            {
+                features.Add("BD-Java");
+            }
+            if (bdRomIso.Is3D)
+            {
+                features.Add("Blu-ray 3D");
+            }
+            if (bdRomIso.IsDBOX)
+            {
+                features.Add("D-BOX Motion Code");
+            }
+            if (bdRomIso.IsPSP)
+            {
+                features.Add("PSP Digital Copy");
+            }
+            if (features.Count > 0)
+            {
+                textBoxDetails.Text += "Detected Features: " + string.Join(", ", features.ToArray()) + Environment.NewLine;
+            }
+
+            textBoxDetails.Text += string.Format(
+                "Disc Size: {0:N0} bytes{1}",
+                bdRomIso.Size,
+                Environment.NewLine);
+
+            LoadPlaylists();
+        }
+
+        private void ScanBitratesProgress(object sender, ScannerEventArgs e)
+        {
+            ScanBDROMState scanState = e.ScanState;
+
+            try
+            {
+                if (scanState.StreamFile != null)
+                {
+                    labelProgress.Text = string.Format(
+                        "Scanning {0}...\r\n",
+                        scanState.StreamFile.DisplayName);
+                }
+
+                long finishedBytes = scanState.FinishedBytes;
+                if (scanState.StreamFile != null)
+                {
+                    finishedBytes += scanState.StreamFile.Size;
+                }
+
+                double progress = ((double)finishedBytes / scanState.TotalBytes);
+                int progressValue = (int)Math.Round(progress * 100);
+                if (progressValue < 0) progressValue = 0;
+                if (progressValue > 100) progressValue = 100;
+                progressBarScan.Value = progressValue;
+
+                TimeSpan elapsedTime = DateTime.Now.Subtract(scanState.TimeStarted);
+                TimeSpan remainingTime;
+                if (progress > 0 && progress < 1)
+                {
+                    remainingTime = new TimeSpan(
+                        (long)((double)elapsedTime.Ticks / progress) - elapsedTime.Ticks);
+                }
+                else
+                {
+                    remainingTime = new TimeSpan(0);
+                }
+
+                labelTimeElapsed.Text = string.Format(
+                    "{0:D2}:{1:D2}:{2:D2}",
+                    elapsedTime.Hours,
+                    elapsedTime.Minutes,
+                    elapsedTime.Seconds);
+
+                labelTimeRemaining.Text = string.Format(
+                    "{0:D2}:{1:D2}:{2:D2}",
+                    remainingTime.Hours,
+                    remainingTime.Minutes,
+                    remainingTime.Seconds);
+
+                UpdatePlaylistBitrates();
+            }
+            catch { }
+        }
+
+        private void ScanBitratesOnScanCompleted(object sender, ScannerEventArgs e)
+        {
+            buttonScan.Enabled = false;
+
+            UpdatePlaylistBitrates();
+
+            labelProgress.Text = "Scan complete.";
+            progressBarScan.Value = 100;
+            labelTimeRemaining.Text = "00:00:00";
+
+            _scanResult = e.ScanResult;
+
+            if (e.ScanResult.ScanException != null)
+            {
+                string msg = string.Format(
+                    "{0}", e.ScanResult.ScanException.Message);
+
+                MessageBox.Show(msg, "BDInfo Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                if (BDInfoSettings.AutosaveReport)
+                {
+                    GenerateReport();
+                }
+                else if (e.ScanResult.FileExceptions.Count > 0)
+                {
+                    MessageBox.Show(
+                        "Scan completed with errors (see report).", "BDInfo Scan",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Scan completed successfully.", "BDInfo Scan",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            buttonBrowse.Enabled = true;
+            button1.Enabled = true;
+            buttonRescan.Enabled = true;
+            buttonScan.Enabled = true;
+            buttonScan.Text = "Scan Bitrates";
         }
 
         private void buttonSettings_Click(object sender, EventArgs e)
@@ -219,7 +475,30 @@ namespace BDInfo
 
         private void buttonScan_Click(object sender, EventArgs e)
         {
-            ScanBDROM();
+            if (_scanner != null && _scanner.IsBusy)
+            {
+                _scanner.CancelAsync();
+
+                return;
+            }
+
+            string path = textBoxSource.Text;
+            try
+            {
+                StartScanBitrates(GetSelectedStreamFiles());
+            }
+            catch (Exception ex)
+            {
+                string msg = string.Format(
+                    "Error opening path {0}: {1}{2}",
+                    path,
+                    ex.Message,
+                    Environment.NewLine);
+
+                MessageBox.Show(msg, "BDInfo Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
         }
 
         private void buttonViewReport_Click(object sender, EventArgs e)
@@ -294,16 +573,12 @@ namespace BDInfo
             BDInfoSettings.LastPath = textBoxSource.Text;
             BDInfoSettings.SaveSettings();
 
-            if (InitBDROMWorker != null &&
-                InitBDROMWorker.IsBusy)
+            if (_scanner != null &&
+                _scanner.IsBusy)
             {
-                InitBDROMWorker.CancelAsync();
+                _scanner.CancelAsync();
             }
-            if (ScanBDROMWorker != null &&
-                ScanBDROMWorker.IsBusy)
-            {
-                ScanBDROMWorker.CancelAsync();
-            }
+
             if (ReportWorker != null &&
                 ReportWorker.IsBusy)
             {
@@ -315,167 +590,6 @@ namespace BDInfo
 
         #region BdRomIso Initialization Worker
 
-        private BackgroundWorker InitBDROMWorker = null;
-
-        private void InitBDROM(string path)
-        {
-            ShowNotification("Please wait while we scan the disc...");
-
-            CustomPlaylistCount = 0;
-            buttonBrowse.Enabled = false;
-            buttonRescan.Enabled = false;
-            buttonSelectAll.Enabled = false;
-            buttonUnselectAll.Enabled = false;
-            buttonCustomPlaylist.Enabled = false;
-            buttonScan.Enabled = false;
-            buttonViewReport.Enabled = false;
-            textBoxDetails.Enabled = false;
-            listViewPlaylistFiles.Enabled = false;
-            listViewStreamFiles.Enabled = false;
-            listViewStreams.Enabled = false;
-            textBoxDetails.Clear();
-            listViewPlaylistFiles.Items.Clear();
-            listViewStreamFiles.Items.Clear();
-            listViewStreams.Items.Clear();
-
-            InitBDROMWorker = new BackgroundWorker();
-            InitBDROMWorker.WorkerReportsProgress = true;
-            InitBDROMWorker.WorkerSupportsCancellation = true;
-            InitBDROMWorker.DoWork += InitBDROMWork;
-            InitBDROMWorker.ProgressChanged += InitBDROMProgress;
-            InitBDROMWorker.RunWorkerCompleted += InitBDROMCompleted;
-            InitBDROMWorker.RunWorkerAsync(path);
-        }
-
-        private void InitBDROMWork(object sender, DoWorkEventArgs e)
-        {
-            try
-            {
-                _bdRomIso = new BdRomIso((string)e.Argument);
-                _bdRomIso.StreamClipFileScanError += new BdRomIso.OnStreamClipFileScanError(BDROM_StreamClipFileScanError);
-                _bdRomIso.StreamFileScanError += new BdRomIso.OnStreamFileScanError(BDROM_StreamFileScanError);
-                _bdRomIso.PlaylistFileScanError += new BdRomIso.OnPlaylistFileScanError(BDROM_PlaylistFileScanError);
-                _bdRomIso.Scan();
-                e.Result = null;
-            }
-            catch (Exception ex)
-            {
-                e.Result = ex;
-            }
-        }
-
-        protected bool BDROM_PlaylistFileScanError(TSPlaylistFile playlistFile, Exception ex)
-        {
-            DialogResult result = MessageBox.Show(string.Format(
-                "An error occurred while scanning the playlist file {0}.\n\nThe disc may be copy-protected or damaged.\n\nDo you want to continue scanning the playlist files?", playlistFile.Name),
-                "BDInfo Scan Error", MessageBoxButtons.YesNo);
-
-            if (result == DialogResult.Yes) return true;
-            else return false;
-        }
-
-        protected bool BDROM_StreamFileScanError(TSStreamFile streamFile, Exception ex)
-        {
-            DialogResult result = MessageBox.Show(string.Format(
-                "An error occurred while scanning the stream file {0}.\n\nThe disc may be copy-protected or damaged.\n\nDo you want to continue scanning the stream files?", streamFile.Name),
-                "BDInfo Scan Error", MessageBoxButtons.YesNo);
-
-            if (result == DialogResult.Yes) return true;
-            else return false;
-        }
-
-        protected bool BDROM_StreamClipFileScanError(TSStreamClipFile streamClipFile, Exception ex)
-        {
-            DialogResult result = MessageBox.Show(string.Format(
-                "An error occurred while scanning the stream clip file {0}.\n\nThe disc may be copy-protected or damaged.\n\nDo you want to continue scanning the stream clip files?", streamClipFile.Name),
-                "BDInfo Scan Error", MessageBoxButtons.YesNo);
-
-            if (result == DialogResult.Yes) return true;
-            else return false;
-        }
-
-        private void InitBDROMProgress(
-            object sender,
-            ProgressChangedEventArgs e)
-        {
-        }
-
-        private void InitBDROMCompleted(object sender, RunWorkerCompletedEventArgs e)
-        {
-            HideNotification();
-
-            if (e.Result != null)
-            {
-                string msg = string.Format(
-                    "{0}", ((Exception)e.Result).Message);
-                MessageBox.Show(msg, "BDInfo Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                buttonBrowse.Enabled = true;
-                buttonRescan.Enabled = true;
-                return;
-            }
-
-            buttonBrowse.Enabled = true;
-            buttonRescan.Enabled = true;
-            buttonScan.Enabled = true;
-            buttonSelectAll.Enabled = true;
-            buttonUnselectAll.Enabled = true;
-            buttonCustomPlaylist.Enabled = true;
-            buttonViewReport.Enabled = true;
-            textBoxDetails.Enabled = true;
-            listViewPlaylistFiles.Enabled = true;
-            listViewStreamFiles.Enabled = true;
-            listViewStreams.Enabled = true;
-            progressBarScan.Value = 0;
-            labelProgress.Text = "";
-            labelTimeElapsed.Text = "00:00:00";
-            labelTimeRemaining.Text = "00:00:00";
-
-            //     textBoxSource.Text = BdRomIso.DirectoryRoot.FullName;
-
-            textBoxDetails.Text += string.Format(
-                "Detected BDMV Folder: {0} ({1}) {2}",
-                _bdRomIso.DirectoryBDMV.FullName,
-                _bdRomIso.VolumeLabel,
-                Environment.NewLine);
-
-            List<string> features = new List<string>();
-            if (_bdRomIso.Is50Hz)
-            {
-                features.Add("50Hz Content");
-            }
-            if (_bdRomIso.IsBDPlus)
-            {
-                features.Add("BD+ Copy Protection");
-            }
-            if (_bdRomIso.IsBDJava)
-            {
-                features.Add("BD-Java");
-            }
-            if (_bdRomIso.Is3D)
-            {
-                features.Add("Blu-ray 3D");
-            }
-            if (_bdRomIso.IsDBOX)
-            {
-                features.Add("D-BOX Motion Code");
-            }
-            if (_bdRomIso.IsPSP)
-            {
-                features.Add("PSP Digital Copy");
-            }
-            if (features.Count > 0)
-            {
-                textBoxDetails.Text += "Detected Features: " + string.Join(", ", features.ToArray()) + Environment.NewLine;
-            }
-
-            textBoxDetails.Text += string.Format(
-                "Disc Size: {0:N0} bytes{1}",
-                _bdRomIso.Size,
-                Environment.NewLine);
-
-            LoadPlaylists();
-        }
 
         #endregion
 
@@ -886,40 +1000,6 @@ namespace BDInfo
 
         #endregion
 
-        #region Scan BdRomIso
-
-        private BackgroundWorker ScanBDROMWorker = null;
-
-        private void ScanBDROM()
-        {
-            if (ScanBDROMWorker != null &&
-                ScanBDROMWorker.IsBusy)
-            {
-                ScanBDROMWorker.CancelAsync();
-                return;
-            }
-
-            buttonScan.Text = "Cancel Scan";
-            progressBarScan.Value = 0;
-            progressBarScan.Minimum = 0;
-            progressBarScan.Maximum = 100;
-            labelProgress.Text = "Scanning disc...";
-            labelTimeElapsed.Text = "00:00:00";
-            labelTimeRemaining.Text = "00:00:00";
-            buttonBrowse.Enabled = false;
-            buttonRescan.Enabled = false;
-
-            List<TSStreamFile> streamFiles = GetSelectedStreamFiles();
-
-            ScanBDROMWorker = new BackgroundWorker();
-            ScanBDROMWorker.WorkerReportsProgress = true;
-            ScanBDROMWorker.WorkerSupportsCancellation = true;
-            ScanBDROMWorker.DoWork += ScanBDROMWork;
-            ScanBDROMWorker.ProgressChanged += ScanBDROMProgress;
-            ScanBDROMWorker.RunWorkerCompleted += ScanBDROMCompleted;
-            ScanBDROMWorker.RunWorkerAsync(streamFiles);
-        }
-
         private List<TSStreamFile> GetSelectedStreamFiles()
         {
             List<TSStreamFile> streamFiles = new List<TSStreamFile>();
@@ -955,244 +1035,6 @@ namespace BDInfo
 
             return streamFiles;
         }
-
-        private void ScanBDROMWork(
-            object sender,
-            DoWorkEventArgs e)
-        {
-            ScanResult = new ScanBDROMResult();
-            ScanResult.ScanException = new Exception("Scan is still running.");
-
-            System.Threading.Timer timer = null;
-            Stream isoStream = null;
-
-            try
-            {
-                List<TSStreamFile> streamFiles =
-                    (List<TSStreamFile>)e.Argument;
-
-                ScanBDROMState scanState = new ScanBDROMState();
-
-                string path = textBoxSource.Text;
-
-                using (DiscFileSystem fileSystem = FileSystemUtilities.GetFileSystem(path,  ref isoStream))
-                {
-                    scanState.FileSystem = fileSystem;
-                    
-                    foreach (TSStreamFile streamFile in streamFiles)
-                    {
-                        if (BDInfoSettings.EnableSSIF &&
-                            streamFile.InterleavedFile != null)
-                        {
-                            scanState.TotalBytes += GetDiscFileInfo(fileSystem, streamFile.InterleavedFile.FileInfo.FullName).Length;
-                        }
-                        else
-                        {
-                            scanState.TotalBytes += GetDiscFileInfo(fileSystem, streamFile.FileInfo.FullName).Length;
-                        }
-
-                        if (!scanState.PlaylistMap.ContainsKey(streamFile.Name))
-                        {
-                            scanState.PlaylistMap[streamFile.Name] = new List<TSPlaylistFile>();
-                        }
-
-                        foreach (TSPlaylistFile playlist
-                            in _bdRomIso.PlaylistFiles.Values)
-                        {
-                            playlist.ClearBitrates();
-
-                            foreach (TSStreamClip clip in playlist.StreamClips)
-                            {
-                                if (clip.Name == streamFile.Name)
-                                {
-                                    if (!scanState.PlaylistMap[streamFile.Name].Contains(playlist))
-                                    {
-                                        scanState.PlaylistMap[streamFile.Name].Add(playlist);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    timer = new System.Threading.Timer(
-                        ScanBDROMEvent, scanState, 1000, 1000);
-
-                    foreach (TSStreamFile streamFile in streamFiles)
-                    {
-                        scanState.StreamFile = streamFile;
-
-                        Thread thread = new Thread(ScanBDROMThread);
-                        thread.Start(scanState);
-                        while (thread.IsAlive)
-                        {
-                            if (ScanBDROMWorker.CancellationPending)
-                            {
-                                ScanResult.ScanException = new Exception("Scan was cancelled.");
-                                thread.Abort();
-                                return;
-                            }
-                            Thread.Sleep(0);
-                        }
-                        scanState.FinishedBytes += GetDiscFileInfo(fileSystem, streamFile.FileInfo.FullName).Length;
-
-                        if (scanState.Exception != null)
-                        {
-                            ScanResult.FileExceptions[streamFile.Name] = scanState.Exception;
-                        }
-                    }
-                    ScanResult.ScanException = null;
-                }
-            }
-            catch (Exception ex)
-            {
-                ScanResult.ScanException = ex;
-            }
-            finally
-            {
-                isoStream?.Close();
-                if (timer != null)
-                {
-                    timer.Dispose();
-                }
-            }
-        }
-
-        private void ScanBDROMThread(
-            object parameter)
-        {
-            ScanBDROMState scanState = (ScanBDROMState)parameter;
-            try
-            {
-                TSStreamFile streamFile = scanState.StreamFile;
-                List<TSPlaylistFile> playlists = scanState.PlaylistMap[streamFile.Name];
-
-                streamFile.Scan(scanState.FileSystem, playlists, true);
-            }
-            catch (Exception ex)
-            {
-                scanState.Exception = ex;
-            }
-        }
-
-        private void ScanBDROMEvent(
-            object state)
-        {
-            try
-            {
-                if (ScanBDROMWorker.IsBusy &&
-                    !ScanBDROMWorker.CancellationPending)
-                {
-                    ScanBDROMWorker.ReportProgress(0, state);
-                }
-            }
-            catch { }
-        }
-
-        private void ScanBDROMProgress(object sender, ProgressChangedEventArgs e)
-        {
-            ScanBDROMState scanState = (ScanBDROMState)e.UserState;
-
-            try
-            {
-                if (scanState.StreamFile != null)
-                {
-                    labelProgress.Text = string.Format(
-                        "Scanning {0}...\r\n",
-                        scanState.StreamFile.DisplayName);
-                }
-
-                long finishedBytes = scanState.FinishedBytes;
-                if (scanState.StreamFile != null)
-                {
-                    finishedBytes += scanState.StreamFile.Size;
-                }
-
-                double progress = ((double)finishedBytes / scanState.TotalBytes);
-                int progressValue = (int)Math.Round(progress * 100);
-                if (progressValue < 0) progressValue = 0;
-                if (progressValue > 100) progressValue = 100;
-                progressBarScan.Value = progressValue;
-
-                TimeSpan elapsedTime = DateTime.Now.Subtract(scanState.TimeStarted);
-                TimeSpan remainingTime;
-                if (progress > 0 && progress < 1)
-                {
-                    remainingTime = new TimeSpan(
-                        (long)((double)elapsedTime.Ticks / progress) - elapsedTime.Ticks);
-                }
-                else
-                {
-                    remainingTime = new TimeSpan(0);
-                }
-
-                labelTimeElapsed.Text = string.Format(
-                    "{0:D2}:{1:D2}:{2:D2}",
-                    elapsedTime.Hours,
-                    elapsedTime.Minutes,
-                    elapsedTime.Seconds);
-
-                labelTimeRemaining.Text = string.Format(
-                    "{0:D2}:{1:D2}:{2:D2}",
-                    remainingTime.Hours,
-                    remainingTime.Minutes,
-                    remainingTime.Seconds);
-
-                UpdatePlaylistBitrates();
-            }
-            catch { }
-        }
-
-        private void ScanBDROMCompleted(
-            object sender,
-            RunWorkerCompletedEventArgs e)
-        {
-            buttonScan.Enabled = false;
-
-            UpdatePlaylistBitrates();
-
-            labelProgress.Text = "Scan complete.";
-            progressBarScan.Value = 100;
-            labelTimeRemaining.Text = "00:00:00";
-
-            if (ScanResult.ScanException != null)
-            {
-                string msg = string.Format(
-                    "{0}", ScanResult.ScanException.Message);
-
-                MessageBox.Show(msg, "BDInfo Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            else
-            {
-                if (BDInfoSettings.AutosaveReport)
-                {
-                    GenerateReport();
-                }
-                else if (ScanResult.FileExceptions.Count > 0)
-                {
-                    MessageBox.Show(
-                        "Scan completed with errors (see report).", "BDInfo Scan",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                else
-                {
-                    MessageBox.Show(
-                        "Scan completed successfully.", "BDInfo Scan",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            buttonBrowse.Enabled = true;
-            buttonRescan.Enabled = true;
-            buttonScan.Enabled = true;
-            buttonScan.Text = "Scan Bitrates";
-        }
-
-        public DiscFileInfo GetDiscFileInfo(DiscFileSystem fileSystem, string fullName)
-        {
-            return fileSystem.GetFileInfo(fullName);
-        }
-
-        #endregion
 
         #region Report Generation
 
@@ -1245,7 +1087,7 @@ namespace BDInfo
             {
                 List<TSPlaylistFile> playlists = (List<TSPlaylistFile>)e.Argument;
                 FormReport report = new FormReport();
-                report.Generate(_bdRomIso, playlists, ScanResult);
+                report.Generate(_bdRomIso, playlists, _scanResult);
                 e.Result = report;
             }
             catch (Exception ex)
