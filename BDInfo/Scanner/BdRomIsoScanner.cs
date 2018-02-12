@@ -51,6 +51,27 @@ namespace BDInfo.Scanner
 
         public void ScanBitrates(List<TSStreamFile> streamFiles)
         {
+            if (_bdRomIso == null)
+            {
+                Exception scanError = null;
+                _bdRomIso = CreateBdRomIso();
+                try
+                {
+                    _bdRomIso.Scan();
+                }
+                catch (Exception e)
+                {
+                    scanError = e;
+                }
+
+                ScanCompleted?.Invoke(this, new ScannerEventArgs(_bdRomIso, scanError, _scanResult, null));
+            }
+
+            if (streamFiles == null)
+            {
+                streamFiles = GetAllStreamFiles();
+            }
+
             worker = new BackgroundWorker
             {
                 WorkerReportsProgress = true,
@@ -188,7 +209,7 @@ namespace BDInfo.Scanner
             }
             catch { }
         }
-        
+
         protected virtual void OnScanCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             ScanCompleted?.Invoke(this, new ScannerEventArgs(_bdRomIso, (Exception)e.Result, _scanResult, null));
@@ -198,5 +219,18 @@ namespace BDInfo.Scanner
         {
             ScanBitratesCompleted?.Invoke(this, new ScannerEventArgs(_bdRomIso, (Exception)e.Result, _scanResult, null));
         }
+
+        private List<TSStreamFile> GetAllStreamFiles()
+        {
+            List<TSStreamFile> streamFiles = new List<TSStreamFile>();
+
+            foreach (var streamFile in _bdRomIso.StreamFiles.Values)
+            {
+                streamFiles.Add(streamFile);
+            }
+
+            return streamFiles;
+        }
+
     }
 }

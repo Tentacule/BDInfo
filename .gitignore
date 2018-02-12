@@ -1,6 +1,8 @@
 BDInfo/bin/
 BDInfo/obj/
+/BDInfo.Cmd/bin/
+/BDInfo.Cmd/obj/Debug
 .vs/
 ZedGraph/bin/
 ZedGraph/obj/
-/BDInfo/BDInfo.csproj.user
+*.user

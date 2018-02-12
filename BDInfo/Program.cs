@@ -18,10 +18,7 @@
 //=============================================================================
 
 using System;
-using System.Threading;
 using System.Windows.Forms;
-using BDInfo.Cli;
-using BDInfo.Scanner;
 
 namespace BDInfo
 {
@@ -36,31 +33,10 @@ namespace BDInfo
         [STAThread]
         static void Main(string[] args)
         {
-            var arguments = CommandLineArguments.ParseArguments(args);
-
-            if (arguments.QuickScan || arguments.ScanBitrates)
-            {
-                CommandLineScan(arguments);
-            }
-            else
-            {
-                string[] formArguments = { arguments.InputPath };
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new FormMain(formArguments));
-            }
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new FormMain(args));
         }
 
-        private static void CommandLineScan(CommandLineArguments arguments)
-        {
-            var scanner = new BdRomIsoScanner(arguments.InputPath);
-            scanner.Scan();
-
-            while (scanner.worker.IsBusy)
-            {
-                Thread.Sleep(50);
-                Application.DoEvents();
-            }
-        }
     }
 }
