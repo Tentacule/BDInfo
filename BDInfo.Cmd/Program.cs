@@ -1,10 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mime;
-using System.Text;
-using System.Threading.Tasks;
-using BDInfo;
 using BDInfo.Cli;
 
 namespace BDInfo.Cmd
@@ -15,10 +9,19 @@ namespace BDInfo.Cmd
         {
             var arguments = CommandLineArguments.ParseArguments(args);
 
+            Console.CancelKeyPress += CancelKeyPressHandler;
+
             if (arguments.QuickScan || arguments.ScanBitrates)
             {
                 CommandLineScanner.CommandLineScan(arguments);
             }
+        }
+
+        protected static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs args)
+        {
+            CommandLineScanner.Scanner?.CancelAsync();
+            Console.WriteLine("\nScan aborted.");
+            CommandLineScanner.Done = true;
         }
     }
 }

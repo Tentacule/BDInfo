@@ -9,7 +9,9 @@ namespace BDInfo.Cli
 {
     public class CommandLineScanner
     {
-        private static bool _done;
+
+        public static BdRomIsoScanner Scanner;
+        public static bool Done { get; set; }
         private static ProgressBar _progress;
         private static string _outputPath;
 
@@ -18,21 +20,21 @@ namespace BDInfo.Cli
             _progress = new ProgressBar();
             _outputPath = arguments.OutputPath;
 
-            var scanner = new BdRomIsoScanner(arguments.InputPath);
-            scanner.ScanStreamClipFileError += OnStreamClipFileScanError;
-            scanner.ScanPlaylistFileError += OnPlaylistFileScanError;
-            scanner.ScanStreamFileError += OnStreamFileScanError;
-            scanner.ScanBitratesProgress += ScanBitratesProgress;
-            scanner.ScanBitratesCompleted += ScanBitratesOnScanCompleted;
-            scanner.ScanCompleted += ScannerOnScanCompleted;
+            Scanner = new BdRomIsoScanner(arguments.InputPath);
+            Scanner.ScanStreamClipFileError += OnStreamClipFileScanError;
+            Scanner.ScanPlaylistFileError += OnPlaylistFileScanError;
+            Scanner.ScanStreamFileError += OnStreamFileScanError;
+            Scanner.ScanBitratesProgress += ScanBitratesProgress;
+            Scanner.ScanBitratesCompleted += ScanBitratesOnScanCompleted;
+            Scanner.ScanCompleted += ScannerOnScanCompleted;
 
-            scanner.ScanBitrates(null);
-
-            while (!_done)
+            Scanner.ScanBitrates(null);
+        
+            while (!Done)
             {
-                Thread.Sleep(50);
+                Thread.Sleep(250);
             }
-       
+
             _progress.Dispose();
         }
 
@@ -123,9 +125,7 @@ namespace BDInfo.Cli
 
                 if (scanState.StreamFile != null)
                 {
-                    message = string.Format(
-                       "Scanning {0}...\r\n",
-                       scanState.StreamFile.DisplayName);
+                    message = $"Scanning {scanState.StreamFile.DisplayName}...";
                 }
 
                 long finishedBytes = scanState.FinishedBytes;
@@ -138,12 +138,8 @@ namespace BDInfo.Cli
                 int progressValue = (int)Math.Round(progress * 100);
                 if (progressValue < 0) progressValue = 0;
                 if (progressValue > 100) progressValue = 100;
-
-
                 double progressPercent = (double)progressValue / 100;
-
-                _progress.Report(progressPercent);
-
+                
                 TimeSpan elapsedTime = DateTime.Now.Subtract(scanState.TimeStarted);
                 TimeSpan remainingTime;
                 if (progress > 0 && progress < 1)
@@ -156,7 +152,10 @@ namespace BDInfo.Cli
                     remainingTime = new TimeSpan(0);
                 }
 
-                _progress.UpdateText(message + " - " + remainingTime);
+                _progress.Message1 = message + " ";
+                _progress.Message2 = "  | Remaining time : " + remainingTime.ToString("hh\\:mm\\:ss");
+                _progress.Report(progressPercent);
+
             }
             catch { }
         }
@@ -168,6 +167,7 @@ namespace BDInfo.Cli
                 File.WriteAllText(_outputPath, ReportUtilities.CreateReport(e.BdRomIso, e.ScanResult));
             }
 
+            //  _progress.Report(string.Empty, 1);
             _progress.Report(1);
 
             Console.WriteLine("Scan complete.");
@@ -191,7 +191,7 @@ namespace BDInfo.Cli
                     Console.WriteLine("Scan completed successfully.");
                 }
             }
-            _done = true;
+            Done = true;
         }
 
     }

@@ -24,6 +24,9 @@ namespace BDInfo.Cli
         private bool disposed = false;
         private int animationIndex = 0;
 
+        public string Message1 = string.Empty;
+        public string Message2 = string.Empty;
+
         public ProgressBar()
         {
             timer = new Timer(TimerHandler);
@@ -56,7 +59,7 @@ namespace BDInfo.Cli
                     new string('#', progressBlockCount), new string('-', blockCount - progressBlockCount),
                     percent,
                     animation[animationIndex++ % animation.Length]);
-                UpdateText(text);
+                UpdateText(Message1 + text + Message2);
 
                 ResetTimer();
             }
